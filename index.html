@@ -1,0 +1,2578 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Boah Store</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Kanit) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tone.js for Sound Notifications -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- QRCode generator for PromptPay -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                screens: {
+                    'xs': '375px',
+                    'sm': '640px',
+                    'md': '768px',
+                    'lg': '1024px',
+                    'xl': '1280px',
+                },
+                extend: {
+                    colors: {
+                        brand: {
+                            red: '#E53E3E',
+                            redDark: '#C53030',
+                            yellow: '#F6AD55',
+                            yellowLight: '#FEFCBF',
+                            yellowAccent: '#D69E2E',
+                            blue: '#3182CE',
+                            blueDark: '#2B6CB0',
+                            bg: '#F8F9FA',
+                            cardBg: '#FFFFFF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Kanit', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #F8F9FA;
+            color: #2D3748;
+            overflow-x: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #EDF2F7;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #A0AEC0;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        .order-alert-pulse {
+            animation: pulse-border 1.5s infinite;
+        }
+        .realtime-clock {
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .realtime-clock .clock-time {
+            letter-spacing: .02em;
+        }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(229, 62, 62, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col justify-between antialiased selection:bg-yellow-200">
+
+    <!-- Background Music Audio Element -->
+    <audio id="bg-music" src="https://mp3tourl.com/audio/1791980698468-b2581564-e62f-4874-a0f3-bdffec31bc49.mp3" loop preload="auto"></audio>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 sm:bottom-5 sm:right-5 sm:top-auto z-50 flex flex-col gap-2 max-w-[calc(100vw-2rem)] sm:max-w-sm w-full pointer-events-none"></div>
+
+    <!-- Admin Alert Banner for New Orders -->
+    <div id="admin-new-order-alert" class="hidden fixed top-3 left-3 right-3 sm:left-auto sm:right-4 sm:top-4 z-50 bg-brand-red text-white p-3.5 sm:p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3 border-2 border-yellow-300 order-alert-pulse cursor-pointer" onclick="openAdminPanelAndSwitchTab('orders')">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-yellow-400 text-red-900 rounded-xl flex items-center justify-center text-xl shrink-0 animate-bounce">
+                <i class="fa-solid fa-bell"></i>
+            </div>
+            <div>
+                <p class="font-bold text-xs sm:text-sm flex items-center gap-1.5">
+                    <span>มีคำสั่งซื้อใหม่เข้ามา!</span>
+                    <span id="alert-order-id-badge" class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-mono">HD-XXXX</span>
+                </p>
+                <p class="text-[10px] sm:text-xs text-red-100">คลิกที่นี่เพื่อเปิดหน้าจัดการออเดอร์หลังบ้าน</p>
+            </div>
+        </div>
+        <button onclick="event.stopPropagation(); closeOrderAlert()" class="p-1 text-white/80 hover:text-white rounded-lg">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 sm:h-20">
+                
+                <!-- Logo -->
+                <div class="flex items-center gap-2 sm:gap-3 cursor-pointer select-none" onclick="resetFilters()">
+                    <div class="w-9 h-9 sm:w-12 sm:h-12 bg-gradient-to-tr from-brand-red to-red-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white shadow-md shadow-red-200 border-2 border-yellow-400 shrink-0">
+                        <i class="fa-solid fa-wheat-awn text-lg sm:text-2xl"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-base sm:text-xl font-extrabold bg-gradient-to-r from-brand-red to-brand-blue bg-clip-text text-transparent leading-tight">BOAH</span>
+                        <span class="text-[9px] sm:text-xs font-semibold text-brand-yellowAccent tracking-wider uppercase leading-none">HAYDAY STORE</span>
+                    </div>
+                </div>
+
+                <!-- Action Controls Navigation -->
+                <div class="flex items-center gap-1.5 sm:gap-2.5">
+                    <!-- Real-time Clock -->
+                    <div id="realtime-clock" class="realtime-clock flex items-center gap-1 sm:gap-1.5 px-2 py-2 sm:px-3 sm:py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 shadow-sm" title="เวลาปัจจุบัน">
+                        <i class="fa-regular fa-clock text-brand-blue text-xs sm:text-sm"></i>
+                        <span id="realtime-clock-time" class="clock-time text-[11px] sm:text-sm font-semibold">00:00:00</span>
+                    </div>
+
+                    <!-- Payment Info Button -->
+                    <button onclick="openPaymentModal()" title="ดูเลขบัญชีโอนเงิน" class="px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition flex items-center gap-1.5 border border-emerald-200 shadow-sm active:scale-95">
+                        <i class="fa-solid fa-qrcode text-emerald-600 text-sm sm:text-base"></i>
+                        <span class="hidden md:inline">เลขบัญชีโอนเงิน</span>
+                    </button>
+
+                    <!-- Check Order Status Button -->
+                    <button onclick="openOrderLookupModal()" title="เช็คสถานะออเดอร์" class="px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-medium text-brand-blue bg-blue-50 hover:bg-blue-100 rounded-xl transition flex items-center gap-1.5 border border-blue-200 active:scale-95">
+                        <i class="fa-solid fa-receipt text-brand-blue text-sm sm:text-base"></i>
+                        <span class="hidden md:inline">เช็คออเดอร์</span>
+                    </button>
+
+                    <!-- Cart Button -->
+                    <button onclick="toggleCartDrawer()" title="ดูตะกร้าสินค้า" class="relative px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-medium text-white bg-brand-red hover:bg-brand-redDark rounded-xl transition flex items-center gap-1.5 shadow-md shadow-red-100 active:scale-95">
+                        <i class="fa-solid fa-basket-shopping text-yellow-300 text-sm sm:text-base"></i>
+                        <span class="hidden xs:inline">ตะกร้า</span>
+                        <span id="cart-count-badge" class="bg-yellow-400 text-red-950 font-bold text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full ml-0.5">0</span>
+                    </button>
+
+                    <!-- Admin Portal Button -->
+                    <button onclick="handleAdminButtonClick()" id="admin-nav-btn" title="แผงควบคุมแอดมิน" class="relative px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5 border border-gray-200 active:scale-95">
+                        <i class="fa-solid fa-user-shield text-brand-blue text-sm sm:text-base" id="admin-icon"></i>
+                        <span class="hidden lg:inline" id="admin-btn-text">แอดมิน</span>
+                        <span id="admin-unread-badge" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full border-2 border-white animate-ping"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 flex-grow w-full">
+        <!-- Hero Banner Card (ส่วนหน้าปก) -->
+        <div id="hero-banner-card" class="w-full rounded-2xl sm:rounded-3xl shadow-lg mb-4 sm:mb-6 overflow-hidden">
+            <img id="hero-banner-img" src="https://s13.gifyu.com/images/bucSj.jpg" alt="Banner" class="w-full h-auto block rounded-2xl sm:rounded-3xl object-cover">
+        </div>
+
+        <!-- Search & Filter Controls Section -->
+        <div class="bg-white rounded-2xl p-3.5 sm:p-5 shadow-sm border border-gray-100 mb-5">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
+                
+                <!-- Search Keyword Input -->
+                <div class="md:col-span-5 relative">
+                    <label class="block text-[11px] sm:text-xs font-semibold text-gray-500 mb-1">ค้นหาชื่อวัตถุดิบ</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs sm:text-sm"></i>
+                        <input type="text" id="search-input" oninput="applyFilters()" placeholder="เช่น แยมองุ่น, ถ่านหินบริสุทธิ์..." class="w-full pl-9 sm:pl-10 pr-3 py-2 sm:py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-xs sm:text-sm transition">
+                    </div>
+                </div>
+
+                <!-- Filter Level Input -->
+                <div class="md:col-span-3">
+                    <label class="block text-[11px] sm:text-xs font-semibold text-gray-500 mb-1">เลเวล</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-star absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-yellow text-xs sm:text-sm"></i>
+                        <input type="number" id="level-input" oninput="applyFilters()" min="1" max="200" placeholder="ระบุเลเวล เช่น 15, 22" class="w-full pl-9 sm:pl-10 pr-3 py-2 sm:py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-yellowAccent/30 focus:border-brand-yellowAccent text-xs sm:text-sm transition">
+                    </div>
+                </div>
+
+                <!-- Category Select Dropdown -->
+                <div class="md:col-span-4">
+                    <label class="block text-[11px] sm:text-xs font-semibold text-gray-500 mb-1">หมวดหมู่สินค้า</label>
+                    <select id="category-select" onchange="applyFilters()" class="w-full px-3 py-2 sm:py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-xs sm:text-sm transition cursor-pointer">
+                        <option value="ALL">📦 ทั้งหมดทุกหมวดหมู่</option>
+                        <option value="COINS">🪙 รับวนเหรียญ</option>
+                        <option value="DIAMONDS">💎 รับเติมเพชร</option>
+                        <option value="BARN">🍭 วัตถุดิบ ขนม แร่</option>
+                        <option value="SILO">🥗 ผัก ผลไม้</option>
+                        <option value="LAND">🛠️ ทำลายล้าง</option>
+                        <option value="TOWN">🌾 อาหารสัตว์</option>
+                        <option value="BARN_UPGRADE">🏠 ชุดอัพโรงนา</option>
+                        <option value="SILO_UPGRADE">🏚️ ชุดอัพยุ้งฉาง</option>
+                        <option value="LAND_EXPAND">🌳 ชุดขยายพื้นที่</option>
+                        <option value="PRODUCTS">📦 สินค้าหมวดอื่น ๆ</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Header Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+                <h2 class="text-base sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked text-brand-red"></i> รายการวัตถุดิบพร้อมขาย
+                </h2>
+                <p class="text-[11px] sm:text-xs text-gray-500 mt-0.5" id="product-count-label">กำลังโหลดข้อมูลสินค้า...</p>
+            </div>
+
+            <!-- Batch Action Toolbar Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="toggleSelectAllProducts()" class="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition border border-gray-200 flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-regular fa-square-check text-brand-blue"></i>
+                    <span id="select-all-btn-text">เลือกทั้งหมด</span>
+                </button>
+                <button onclick="clearSelectedProducts()" class="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded-xl transition border border-gray-200 flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-rotate-left"></i> ล้างการเลือก
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Product Grid (Responsive Cards) -->
+        <div id="product-grid" class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+            <!-- Dynamic items rendered via JS -->
+        </div>
+
+        <!-- Empty State View -->
+        <div id="empty-state" class="hidden text-center py-12 sm:py-16 bg-white rounded-2xl sm:rounded-3xl border border-dashed border-gray-200 mt-4 px-4">
+            <div class="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-3 text-xl sm:text-2xl">
+                <i class="fa-solid fa-magnifying-glass-slash"></i>
+            </div>
+            <h3 class="font-bold text-gray-700 text-sm sm:text-lg mb-1">ไม่พบสินค้าที่ตรงกับการค้นหา</h3>
+            <p class="text-xs sm:text-sm text-gray-400 max-w-sm mx-auto">ลองเปลี่ยนคำค้นหา ปรับระดับเลเวล หรือรีเซ็ตตัวกรองดูอีกครั้ง</p>
+            <button onclick="resetFilters()" class="mt-4 px-4 py-2 text-xs sm:text-sm font-semibold text-brand-blue bg-blue-50 hover:bg-blue-100 rounded-xl transition active:scale-95">
+                ล้างตัวกรองทั้งหมด
+            </button>
+        </div>
+    </main>
+
+    <!-- Floating Bottom Bar for Batch Adding Selected Items to Cart -->
+    <div id="batch-add-bar" class="fixed bottom-3 left-3 right-3 sm:bottom-5 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-xl z-40 bg-gray-900/95 backdrop-blur-md text-white p-3 sm:p-4 rounded-2xl shadow-2xl border border-gray-800 flex items-center justify-between gap-3 transition-all duration-300 translate-y-32 opacity-0 pointer-events-none">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-brand-red rounded-xl flex items-center justify-center text-yellow-300 font-bold text-lg shrink-0">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div>
+                <p class="font-bold text-xs sm:text-sm">
+                    เลือกไว้ <span id="batch-count" class="text-yellow-400 text-sm sm:text-base font-extrabold">0</span> รายการ
+                </p>
+                <p class="text-[10px] sm:text-xs text-gray-300">
+                    รวมทั้งหมด <span id="batch-total-pieces" class="text-yellow-300 font-semibold">0</span> ชิ้น
+                </p>
+            </div>
+        </div>
+        <button onclick="addBatchSelectedToCart()" class="px-4 py-2.5 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-500 text-red-950 font-extrabold rounded-xl shadow-lg text-xs sm:text-sm flex items-center gap-2 active:scale-95 transition">
+            <i class="fa-solid fa-cart-plus text-base"></i>
+            <span>ใส่ตะกร้าทีเดียว</span>
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-100 py-6 mt-8 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4 space-y-1">
+            <p class="font-medium text-gray-600">© 2026 Hay Day ♡ Boah Store </p>
+            <p class="text-[10px] sm:text-xs text-gray-400">Line @mat3660j</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar / Drawer -->
+    <div id="cart-drawer" class="fixed inset-0 z-50 overflow-hidden hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300" onclick="toggleCartDrawer()"></div>
+        <div class="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+            <div class="w-screen max-w-md bg-white shadow-2xl flex flex-col h-full">
+                
+                <!-- Cart Header -->
+                <div class="p-4 sm:p-5 border-b border-gray-100 bg-brand-red text-white flex items-center justify-between shrink-0">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-basket-shopping text-yellow-300 text-lg"></i>
+                        <h2 class="text-base sm:text-lg font-bold">ตะกร้าสินค้าของคุณ</h2>
+                    </div>
+                    <button onclick="toggleCartDrawer()" class="text-white/80 hover:text-white p-1 rounded-lg text-xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Cart Items List Container -->
+                <div class="flex-grow overflow-y-auto p-3.5 sm:p-5 space-y-3 custom-scrollbar" id="cart-items-container">
+                    <!-- Dynamic cart items rendered via JS -->
+                </div>
+
+                <!-- Cart Footer & Checkout Form -->
+                <div class="p-4 sm:p-5 border-t border-gray-100 bg-gray-50 space-y-3.5 shrink-0 pb-safe">
+                    <div class="space-y-1 text-xs sm:text-sm border-b border-gray-200 pb-3">
+                        <div class="flex justify-between text-gray-600">
+                            <span>ราคารวมวัตถุดิบ</span>
+                            <span id="cart-subtotal" class="font-semibold text-gray-800">0 ฿</span>
+                        </div>
+                        <div class="flex justify-between text-sm sm:text-base font-bold text-gray-800 pt-1">
+                            <span>ยอดชำระสุทธิ</span>
+                            <span id="cart-total" class="text-brand-red text-lg sm:text-xl font-black">0 ฿</span>
+                        </div>
+                    </div>
+
+                    <!-- Customer Information Inputs -->
+                    <div class="space-y-2.5">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-600 mb-1">ชื่อในเกม / ชื่อลูกค้า <span class="text-red-500">*</span></label>
+                            <input type="text" id="cust-name-input" placeholder="เช่น ฟาร์มคุณขนมข้าว" class="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-gray-600 mb-1">แท็กฟาร์ม (Tag ID) / ช่องทางติดต่อ <span class="text-red-500">*</span></label>
+                            <input type="text" id="cust-tag-input" placeholder="เช่น #P90GY22L หรือ Line ID" class="w-full px-3 py-2 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-brand-blue">
+                        </div>
+                    </div>
+
+                    <button onclick="processCheckout()" id="checkout-btn" class="w-full py-3 bg-gradient-to-r from-brand-red to-red-600 hover:from-red-600 hover:to-brand-red text-white font-bold rounded-xl shadow-md transition text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-check-circle text-yellow-300"></i> ยืนยันการสั่งซื้อ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt / Order Confirmation Modal -->
+    <div id="receipt-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs hidden overflow-y-auto">
+        <div class="bg-white rounded-2xl sm:rounded-3xl max-w-md w-full max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl relative border-t-8 border-brand-red my-auto">
+            <button onclick="closeReceiptModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center mb-4 shrink-0">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-2 text-lg sm:text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h3 class="text-lg sm:text-2xl font-bold text-gray-800">ทำรายการสำเร็จ!</h3>
+                <p class="text-[11px] sm:text-xs text-gray-500">คัดลอกข้อความใบเสร็จส่งให้แอดมินเพื่อส่งของได้ทันที</p>
+            </div>
+
+            <!-- Receipt Box -->
+            <div class="bg-amber-50 border border-amber-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 mb-4 text-xs font-mono text-gray-700 overflow-y-auto custom-scrollbar flex-grow" id="receipt-box">
+                <div class="text-center border-b border-dashed border-amber-300 pb-2 mb-2">
+                    <p class="font-bold text-sm sm:text-base text-gray-900">=== ใบสั่งซื้อ HAY DAY ===</p>
+                    <p class="text-[11px] text-gray-500 mt-0.5">เลข Order: <span id="rec-order-id" class="font-bold text-brand-red">HD-XXXXXX</span></p>
+                    <p class="text-[10px] text-gray-400">วันที่: <span id="rec-date">-</span></p>
+                </div>
+
+                <div class="space-y-0.5 mb-2 text-[11px]">
+                    <p><strong>ผู้สั่งซื้อ:</strong> <span id="rec-cust-name">-</span></p>
+                    <p><strong>ติดต่อ/Tag:</strong> <span id="rec-cust-tag">-</span></p>
+                </div>
+
+                <div class="border-t border-b border-dashed border-amber-300 py-2 my-2 space-y-1 text-[11px]" id="rec-items-list">
+                    <!-- Dynamic receipt items -->
+                </div>
+
+                <div class="flex justify-between items-center font-bold text-xs sm:text-sm text-gray-900 pt-1">
+                    <span>ราคารวมทั้งสิ้น:</span>
+                    <span id="rec-total-price" class="text-brand-red text-sm sm:text-base">0 ฿</span>
+                </div>
+
+                <div id="receipt-promptpay-section" class="mt-3 pt-3 border-t border-dashed border-amber-300 text-center">
+                    <p class="font-bold text-emerald-700 text-xs sm:text-sm">สแกน QR พร้อมเพย์เพื่อชำระเงิน</p>
+                    <p class="text-[10px] text-gray-500 mb-2">ระบบใส่ยอดที่ต้องชำระตามออเดอร์ให้อัตโนมัติ</p>
+                    <div id="receipt-promptpay-qr" class="inline-flex p-2 bg-white border border-gray-200 rounded-xl min-h-[160px] min-w-[160px] items-center justify-center"></div>
+                    <p class="text-[10px] text-gray-500 mt-2">ยอดที่ต้องชำระ <strong id="receipt-promptpay-amount" class="text-emerald-700 text-sm">0.00 ฿</strong></p>
+                    <button onclick="copyPromptPayNo()" class="mt-2 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold border border-emerald-200">
+                        <i class="fa-solid fa-copy"></i> คัดลอกเลขพร้อมเพย์
+                    </button>
+                </div>
+                <p class="text-[10px] text-gray-400 text-center mt-3">** นำ Order ID ไปส่งให้แอดมินทางแชต **</p>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-2 shrink-0">
+                <button onclick="openPaymentModal()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95">
+                    <i class="fa-solid fa-qrcode"></i> ดูเลขบัญชี / QR Code โอนเงิน
+                </button>
+                <button onclick="copyReceiptText()" class="w-full py-2.5 bg-brand-blue hover:bg-brand-blueDark text-white font-bold rounded-xl shadow transition text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95">
+                    <i class="fa-solid fa-copy"></i> คัดลอกข้อความใบเสร็จ
+                </button>
+                <button onclick="closeReceiptModal()" class="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition text-xs">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Accounts Modal -->
+    <div id="payment-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs hidden overflow-y-auto">
+        <div class="bg-white rounded-2xl sm:rounded-3xl max-w-md w-full max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl relative border-t-8 border-emerald-500 my-auto">
+            <button onclick="closePaymentModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center mb-4 shrink-0">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-2 text-lg sm:text-xl">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <h3 class="text-base sm:text-xl font-bold text-gray-800">ช่องทางการชำระเงิน </h3>
+                <p id="payment-modal-subtitle" class="text-[11px] sm:text-xs text-gray-500">ดูข้อมูลบัญชี กดคัดลอก หรือ สร้าง QR พร้อมเพย์เพื่อชำระเงินได้เลยค่ะ</p>
+            </div>
+
+            <!-- PromptPay quick payment -->
+            <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 sm:p-4 mb-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-emerald-900 text-xs sm:text-sm">พร้อมเพย์</p>
+                        <p class="text-[10px] text-emerald-700">สร้าง QR ตามจำนวนเงินที่ต้องการชำระ</p>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border border-emerald-200 p-2.5">
+                    <p class="text-[10px] text-gray-500 mb-1">พร้อมเพย์: <strong id="pay-promptpay-no" class="text-gray-800">-</strong></p>
+                    <div class="flex gap-2">
+                        <input type="number" id="manual-payment-amount" min="0.01" step="0.01" placeholder="กรอกจำนวนเงิน เช่น 89.00"
+                               class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-emerald-500">
+                        <button onclick="generateManualPromptPayQR()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-[10px] sm:text-xs whitespace-nowrap">
+                            สร้าง QR
+                        </button>
+                    </div>
+                    <div id="manual-promptpay-qr-wrap" class="hidden mt-3 text-center border-t border-dashed border-emerald-200 pt-3">
+                        <div id="manual-promptpay-qr" class="inline-flex p-2 bg-white border rounded-xl"></div>
+                        <p class="text-xs font-bold text-emerald-700 mt-2">สแกนเพื่อชำระ <span id="manual-promptpay-amount">0.00</span> ฿</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Accounts Grid -->
+            <div class="space-y-3 overflow-y-auto custom-scrollbar flex-grow pr-1">
+                <!-- 1. Bank Account -->
+                <div class="bg-sky-50 border border-sky-200 rounded-2xl p-3 sm:p-4 flex flex-col xs:flex-row items-center gap-3">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl overflow-hidden p-1 shadow-xs border border-sky-100 shrink-0">
+                        <img id="pay-ktb-qr" src="https://placehold.co/300x300/00A3E0/FFFFFF?text=Bank+QR" alt="Bank QR" class="w-full h-full object-contain rounded-lg">
+                    </div>
+                    <div class="flex-grow text-center xs:text-left space-y-1 w-full">
+                        <div class="flex items-center justify-center xs:justify-start gap-1.5">
+                            <span class="w-2.5 h-2.5 bg-sky-500 rounded-full"></span>
+                            <span class="font-bold text-sky-900 text-xs sm:text-sm" id="pay-ktb-bankname">ธนาคารกรุงไทย</span>
+                        </div>
+                        <p class="text-[11px] text-gray-600">ชื่อบัญชี: <strong id="pay-ktb-name" class="text-gray-800">-</strong></p>
+                        <div class="bg-white border border-sky-200 rounded-xl p-1.5 flex items-center justify-between gap-1 mt-1">
+                            <span id="pay-ktb-no" class="font-mono font-bold text-sky-900 text-xs sm:text-sm pl-1 break-all">-</span>
+                            <button onclick="copyAccountNo('pay-ktb-no', 'เลขบัญชีธนาคาร')" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-[10px] font-bold transition shrink-0 active:scale-95">
+                                <i class="fa-solid fa-copy"></i> คัดลอก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. TrueMoney Wallet -->
+                <div class="bg-orange-50 border border-orange-200 rounded-2xl p-3 sm:p-4 flex flex-col xs:flex-row items-center gap-3">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl overflow-hidden p-1 shadow-xs border border-orange-100 shrink-0">
+                        <img id="pay-truemoney-qr" src="https://placehold.co/300x300/FF6B00/FFFFFF?text=TrueMoney+QR" alt="TrueMoney QR" class="w-full h-full object-contain rounded-lg">
+                    </div>
+                    <div class="flex-grow text-center xs:text-left space-y-1 w-full">
+                        <div class="flex items-center justify-center xs:justify-start gap-1.5">
+                            <span class="w-2.5 h-2.5 bg-orange-500 rounded-full"></span>
+                            <span class="font-bold text-orange-900 text-xs sm:text-sm">ทรูมันนี่ วอลเล็ท</span>
+                        </div>
+                        <p class="text-[11px] text-gray-600">ชื่อบัญชี: <strong id="pay-truemoney-name" class="text-gray-800">-</strong></p>
+                        <div class="bg-white border border-orange-200 rounded-xl p-1.5 flex items-center justify-between gap-1 mt-1">
+                            <span id="pay-truemoney-no" class="font-mono font-bold text-orange-900 text-xs sm:text-sm pl-1 break-all">-</span>
+                            <button onclick="copyAccountNo('pay-truemoney-no', 'ทรูมันนี่วอลเล็ต')" class="px-2.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-[10px] font-bold transition shrink-0 active:scale-95">
+                                <i class="fa-solid fa-copy"></i> คัดลอก
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closePaymentModal()" class="w-full mt-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition text-xs shrink-0">
+                ปิดหน้าต่าง
+            </button>
+        </div>
+    </div>
+
+    <!-- Order Lookup Modal -->
+    <div id="order-lookup-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs hidden">
+        <div class="bg-white rounded-2xl sm:rounded-3xl max-w-sm w-full p-4 sm:p-6 shadow-2xl relative">
+            <button onclick="closeOrderLookupModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <h3 class="text-base sm:text-lg font-bold text-gray-800 mb-0.5 flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass text-brand-blue"></i> เช็คสถานะออเดอร์
+            </h3>
+            <p class="text-[11px] text-gray-500 mb-3">ใส่รหัส Order ID (เช่น HD-123456)</p>
+
+            <div class="flex gap-2 mb-3">
+                <input type="text" id="lookup-id-input" placeholder="HD-XXXXXX" class="flex-grow px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-brand-blue uppercase">
+                <button onclick="searchOrderById()" class="px-3.5 py-2 bg-brand-blue text-white font-semibold rounded-xl hover:bg-brand-blueDark text-xs sm:text-sm active:scale-95">ค้นหา</button>
+            </div>
+
+            <div id="lookup-result-box" class="hidden p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs space-y-1.5 max-h-60 overflow-y-auto">
+                <!-- Dynamic search result -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs hidden">
+        <div class="bg-white rounded-2xl sm:rounded-3xl max-w-xs sm:max-w-sm w-full p-5 shadow-2xl relative">
+            <button onclick="closeAdminLoginModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl p-1">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-brand-blue mx-auto mb-2 text-lg sm:text-xl">
+                    <i class="fa-solid fa-user-lock"></i>
+                </div>
+                <h3 class="text-base sm:text-lg font-bold text-gray-800">เข้าสู่ระบบแอดมิน</h3>
+                <p class="text-[11px] text-gray-400">กรอกอีเมลและรหัสผ่านเพื่อจัดการระบบ</p>
+            </div>
+
+            <form onsubmit="handleAdminLogin(event)" class="space-y-3">
+                <div>
+                    <label class="block text-[11px] font-semibold text-gray-600 mb-1">Email</label>
+                    <input type="email" id="admin-email-input" required placeholder="อีเมลแอดมิน" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-brand-blue">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold text-gray-600 mb-1">Password</label>
+                    <input type="password" id="admin-pass-input" required placeholder="รหัสผ่าน" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-brand-blue">
+                </div>
+                <button type="submit" id="admin-login-btn" class="w-full py-2.5 bg-brand-blue hover:bg-brand-blueDark text-white font-bold rounded-xl shadow transition text-xs sm:text-sm active:scale-95">
+                    Login
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Control Panel Drawer/Modal -->
+    <div id="admin-panel-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 lg:p-6 hidden">
+        <div class="bg-white rounded-2xl sm:rounded-3xl max-w-5xl w-full h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+            
+            <!-- Admin Header -->
+            <div class="bg-gray-900 text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between border-b border-gray-800 shrink-0">
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <span class="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></span>
+                    <h2 class="font-bold text-sm sm:text-base md:text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-yellow-400"></i> ระบบแอดมินหลังบ้าน
+                    </h2>
+                    <span class="bg-red-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline-block">Admin Active</span>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleAdminAudioAlert()" id="admin-audio-toggle-btn" class="px-2.5 py-1 text-[11px] bg-gray-800 hover:bg-gray-700 text-yellow-300 rounded-lg transition border border-gray-700 flex items-center gap-1">
+                        <i class="fa-solid fa-volume-high" id="admin-audio-icon"></i>
+                        <span class="hidden md:inline">เปิดเสียงเตือน</span>
+                    </button>
+                    <button onclick="logoutAdmin()" class="px-2.5 py-1 text-[11px] sm:text-xs bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition active:scale-95">
+                        ออกจากระบบ
+                    </button>
+                    <button onclick="closeAdminPanel()" class="text-gray-400 hover:text-white p-1 text-lg sm:text-xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Tabs Navigation Bar -->
+            <div class="flex border-b border-gray-200 bg-gray-100 px-3 sm:px-6 pt-2 gap-1.5 overflow-x-auto custom-scrollbar shrink-0 select-none">
+                <button onclick="switchAdminTab('products')" id="tab-btn-products" class="px-3 py-2 text-xs font-bold border-b-2 border-brand-blue text-brand-blue whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                    <i class="fa-solid fa-box"></i> สินค้า & สต็อก
+                </button>
+                <button onclick="switchAdminTab('orders')" id="tab-btn-orders" class="relative px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                    <i class="fa-solid fa-receipt"></i> รายการสั่งซื้อ
+                    <span id="tab-orders-badge" class="hidden bg-brand-red text-white text-[9px] font-bold px-1.5 py-0.2 rounded-full">0</span>
+                </button>
+                <button onclick="switchAdminTab('settings')" id="tab-btn-settings" class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                    <i class="fa-solid fa-gear"></i> ตั้งค่าระบบ & เพลง
+                </button>
+                <button onclick="switchAdminTab('payment')" id="tab-btn-payment" class="px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                    <i class="fa-solid fa-qrcode text-emerald-600"></i> เลขบัญชีรับเงิน
+                </button>
+            </div>
+
+            <!-- Admin Content Container -->
+            <div class="flex-grow overflow-y-auto p-3 sm:p-5 custom-scrollbar bg-gray-50">
+                
+                <!-- TAB 1: PRODUCTS MANAGER -->
+                <div id="admin-tab-products" class="space-y-4">
+                    <div class="bg-white rounded-2xl p-3.5 sm:p-5 border border-gray-200 shadow-xs">
+                        <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2 text-xs sm:text-sm">
+                            <i class="fa-solid fa-plus-circle text-brand-red"></i> เพิ่มรายการวัตถุดิบใหม่
+                        </h3>
+                        <form onsubmit="handleAddNewProduct(event)" class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                            <div class="xs:col-span-2">
+                                <label class="block text-gray-600 mb-1">ชื่อวัตถุดิบ</label>
+                                <input type="text" id="add-prod-name" required placeholder="เช่น แยมองุ่น,ถ่านหินบริสุทธิ์" class="w-full px-2.5 py-1.5 border rounded-xl bg-gray-50">
+                            </div>
+                            <div class="lg:col-span-3">
+                                <label class="block text-gray-600 mb-1">ราคาสินค้า <span class="text-gray-400">(กำหนดราคาต่อชิ้น และเพิ่มแพ็กของสินค้า)</span></label>
+                                <div class="mb-2">
+                                    <label class="block text-[10px] text-gray-500 mb-1">ราคาต่อชิ้น</label>
+                                    <input type="number" id="add-prod-price-1" required min="0" step="0.01" placeholder="เช่น 0.20" class="w-full px-2.5 py-1.5 border rounded-xl bg-gray-50">
+                                </div>
+                                <div class="border border-dashed border-gray-300 rounded-xl p-2.5 bg-gray-50/70">
+                                    <div class="flex items-center justify-between gap-2 mb-2">
+                                        <div>
+                                            <p class="font-semibold text-gray-700 text-[11px]">ราคาแพ็ก</p>
+                                            <p class="text-[10px] text-gray-400">กำหนดจำนวนและราคาด้วยตนเอง  เช่น 25 ชิ้น = 4 ฿</p>
+                                        </div>
+                                        <button type="button" onclick="addNewPackageRow('add')" class="px-2.5 py-1.5 bg-brand-blue text-white rounded-lg text-[10px] font-bold hover:bg-brand-blueDark">+ เพิ่มแพ็ก</button>
+                                    </div>
+                                    <div id="add-package-rows" class="space-y-2"></div>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">ลูกค้าสามารถซื้อจำนวนที่ไม่ได้ตั้งเป็นแพ็กได้ โดยระบบคำนวณจากราคาต่อชิ้น</p>
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 mb-1">จำนวนสต็อก</label>
+                                <input type="number" id="add-prod-stock" required min="0" placeholder="เช่น 100" class="w-full px-2.5 py-1.5 border rounded-xl bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 mb-1">เลเวลขั้นต่ำ</label>
+                                <input type="number" id="add-prod-level" required min="1" placeholder="เช่น 1" class="w-full px-2.5 py-1.5 border rounded-xl bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-gray-600 mb-1">หมวดหมู่</label>
+                                <select id="add-prod-category" class="w-full px-2 py-1.5 border rounded-xl bg-gray-50">
+                                    <option value="COINS">🪙 รับวนเหรียญ</option>
+                                    <option value="DIAMONDS">💎 รับเติมเพชร</option>
+                                    <option value="BARN">🍭 วัตถุดิบ ขนม แร่</option>
+                                    <option value="SILO">🥗 ผัก ผลไม้</option>
+                                    <option value="LAND">🛠️ ทำลายล้าง</option>
+                                    <option value="TOWN">🌾 อาหารสัตว์</option>
+                                    <option value="BARN_UPGRADE">🏠 ชุดอัพโรงนา</option>
+                                    <option value="SILO_UPGRADE">🏚️ ชุดอัพยุ้งฉาง</option>
+                                    <option value="LAND_EXPAND">🌳 ชุดขยายพื้นที่</option>
+                                    <option value="PRODUCTS">📦 สินค้าหมวดอื่น ๆ</option>
+                                </select>
+                            </div>
+                            <div class="xs:col-span-2">
+                                <label class="block text-gray-600 mb-1">ลิงก์ รูปภาพสินค้า (URL)</label>
+                                
+<div class="flex flex-col gap-2">
+    <div class="flex gap-2">
+        <input type="url" id="add-prod-image" placeholder="https://..." class="w-full px-2.5 py-1.5 border rounded-xl bg-gray-50">
+        <button type="button" onclick="document.getElementById('add-prod-image-file').click()"
+                class="shrink-0 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold">
+            <i class="fa-solid fa-upload"></i> อัปโหลดจากเครื่อง
+        </button>
+    </div>
+    <input type="file" id="add-prod-image-file" accept="image/*" class="hidden"
+           onchange="handleProductImageUpload(this, 'add-prod-image')">
+    <div id="add-prod-image-status" class="text-[10px] text-gray-400"></div>
+</div>
+                            </div>
+                            <div class="xs:col-span-2 lg:col-span-4 flex justify-end pt-1">
+                                <button type="submit" id="add-prod-submit-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition active:scale-95 disabled:opacity-50">
+                                    + บันทึกเพิ่มสินค้า
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+                        <div class="p-3.5 border-b border-gray-100 flex items-center justify-between">
+                            <h4 class="font-bold text-xs sm:text-sm text-gray-800">รายการสินค้าในระบบทั้งหมด</h4>
+                            <span id="admin-prod-count" class="text-[11px] text-gray-500">0 รายการ</span>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left text-xs border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 border-b border-gray-200">
+                                        <th class="p-3">สินค้า</th>
+                                        <th class="p-3">หมวดหมู่</th>
+                                        <th class="p-3">ราคา</th>
+                                        <th class="p-3">สต็อกคงเหลือ</th>
+                                        <th class="p-3 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-product-table-body" class="divide-y divide-gray-100">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: ORDERS MANAGER WITH REALTIME ALERTS -->
+                <div id="admin-tab-orders" class="hidden space-y-3">
+                    <div class="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+                        <div class="p-3.5 border-b border-gray-100 flex justify-between items-center gap-2">
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-xs sm:text-sm text-gray-800">รายการสั่งซื้อของลูกค้า</h4>
+                                <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">แจ้งเตือนเรียลไทม์</span>
+                            </div>
+                            <button onclick="clearAllOrders()" class="text-[10px] text-red-600 hover:underline">ล้างประวัติคำสั่งซื้อทั้งหมด</button>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left text-xs border-collapse min-w-[650px]">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 border-b border-gray-200">
+                                        <th class="p-3">Order ID</th>
+                                        <th class="p-3">ลูกค้า / Tag ID</th>
+                                        <th class="p-3">รายการที่สั่ง</th>
+                                        <th class="p-3">ราคารวม</th>
+                                        <th class="p-3">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-orders-table-body" class="divide-y divide-gray-100">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: SETTINGS MANAGER (BANNER & MUSIC TOGGLE) -->
+                <div id="admin-tab-settings" class="hidden space-y-4">
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800">ปรับแต่ง Banner หน้าแรก</h4>
+                        <div>
+                            <label class="block text-gray-600 mb-1">ลิงก์รูปภาพ Banner (URL)</label>
+                            <input type="url" id="setting-hero-image" placeholder="https://..." class="w-full px-3 py-2 border rounded-xl bg-gray-50">
+                        </div>
+                        <button onclick="saveBannerSettings()" class="px-4 py-2 bg-brand-blue text-white font-bold rounded-xl transition active:scale-95">
+                            บันทึกการตั้งค่า Banner
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-music text-brand-red"></i> ควบคุมเสียงเพลงประกอบเว็บไซต์ (Background Music)
+                        </h4>
+                        <p class="text-gray-500">เพลงจะเล่นอัตโนมัติทันทีเมื่อผู้ใช้แตะหรือสัมผัสหน้าเว็บ แอดมินสามารถเปิด/ปิดเสียงเพลงได้ที่นี่</p>
+                        <div class="flex items-center justify-between bg-gray-50 p-3 rounded-xl border">
+                            <span class="font-semibold text-gray-700">สถานะเพลงประกอบ (BGM)</span>
+                            <button onclick="toggleBackgroundMusic()" id="admin-bg-music-toggle-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5">
+                                <i class="fa-solid fa-volume-high" id="admin-bg-music-icon"></i>
+                                <span id="admin-bg-music-text">เปิดเสียงเพลงอยู่</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: PAYMENT ACCOUNTS SETTINGS -->
+                <div id="admin-tab-payment" class="hidden space-y-4">
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-4 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800 border-b pb-2">ตั้งค่าช่องทางการรับเงิน</h4>
+                        
+                        <!-- Bank Acc Config -->
+                        <div class="space-y-2 bg-sky-50 p-3 rounded-xl border border-sky-100">
+                            <span class="font-bold text-sky-900">1. บัญชีธนาคาร</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="setting-bank-name" placeholder="ชื่อธนาคาร" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                                <input type="text" id="setting-bank-acc-name" placeholder="ชื่อบัญชี" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                                <input type="text" id="setting-bank-no" placeholder="เลขบัญชี" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                                <input type="text" id="setting-bank-qr" placeholder="URL รูป QR Code" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                            </div>
+                        </div>
+
+                        <!-- TrueMoney Config -->
+                        <div class="space-y-2 bg-orange-50 p-3 rounded-xl border border-orange-100">
+                            <span class="font-bold text-orange-900">2. บัญชีทรูมันนี่ วอลเล็ท</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="setting-wallet-acc-name" placeholder="ชื่อบัญชีทรูมันนี่" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                                <input type="text" id="setting-wallet-no" placeholder="เบอร์โทรศัพท์วอลเล็ท" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                                <input type="text" id="setting-wallet-qr" placeholder="URL รูป QR Code" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                            </div>
+                        </div>
+
+                        <!-- PromptPay Config -->
+                        <div class="space-y-2 bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                            <span class="font-bold text-emerald-900">3. พร้อมเพย์สำหรับสร้าง QR ตามยอดเงิน</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="setting-promptpay-no" placeholder="เบอร์มือถือ/เลขพร้อมเพย์" class="px-2.5 py-1.5 border rounded-lg bg-white">
+                            </div>
+                            <p class="text-[10px] text-gray-500">ใส่เบอร์หรือเลขพร้อมเพย์ของร้าน ระบบจะสร้าง QR แบบระบุยอดเงินอัตโนมัติ</p>
+                        </div>
+
+                        <button onclick="savePaymentSettings()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl transition active:scale-95">
+                            บันทึกช่องทางชำระเงิน
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBcIBA0vhZAiyT4QCtFqt7HG4TeZV0fWlc",
+            authDomain: "ha-day-3dde0.firebaseapp.com",
+            projectId: "ha-day-3dde0",
+            storageBucket: "ha-day-3dde0.firebasestorage.app",
+            messagingSenderId: "303647011021",
+            appId: "1:303647011021:web:73685a1f2bd50f70feb984",
+            measurementId: "G-HFQ69CR3KM"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const DEFAULT_PRODUCTS = [
+            { id: 'P01', name: 'ไม้แผ่น (Plank)', category: 'BARN', price: 15, stock: 120, level: 1, image: 'gifyu.com' },
+            { id: 'P02', name: 'เทปกาว (Duct Tape)', category: 'BARN', price: 18, stock: 85, level: 1, image: 'gifyu.com' },
+            { id: 'P03', name: 'ตะปูยาว (Bolt)', category: 'BARN', price: 15, stock: 90, level: 1, image: 'gifyu.com' },
+            { id: 'P04', name: 'ตะปูตัวสั้น (Nail)', category: 'SILO', price: 12, stock: 150, level: 1, image: 'gifyu.com' },
+            { id: 'P05', name: 'ไม้กระดาน (Screw)', category: 'SILO', price: 12, stock: 110, level: 1, image: 'gifyu.com' },
+            { id: 'P06', name: 'แผ่นแผงสังกะสี (Panels)', category: 'SILO', price: 14, stock: 75, level: 1, image: 'gifyu.com' },
+            { id: 'P07', name: 'โฉนดที่ดิน (Land Deed)', category: 'LAND', price: 20, stock: 60, level: 22, image: 'gifyu.com' },
+            { id: 'P08', name: 'หลักปักที่ดิน (Mallet)', category: 'LAND', price: 20, stock: 55, level: 22, image: 'gifyu.com' },
+            { id: 'P09', name: 'ตลับเมตร (Marker Stake)', category: 'LAND', price: 20, stock: 65, level: 22, image: 'gifyu.com' },
+            { id: 'P10', name: 'ขวานถางป่า (Axe)', category: 'PRODUCTS', price: 8, stock: 300, level: 5, image: 'gifyu.com' },
+            { id: 'P11', name: 'เลื่อยตัดไม้ (Saw)', category: 'PRODUCTS', price: 10, stock: 250, level: 5, image: 'gifyu.com' },
+            { id: 'P12', name: 'ระเบิดไดนาไมต์ (Dynamite)', category: 'PRODUCTS', price: 15, stock: 80, level: 26, image: 'gifyu.com' }
+        ];
+
+        let products = [];
+        let cart = JSON.parse(localStorage.getItem('hayday_cart')) || [];
+        let orders = [];
+        let isAdminLoggedIn = false;
+        let adminAudioEnabled = true;
+        let backgroundMusicPlaying = true;
+
+        let productQtyMap = {};
+        let selectedProductCheckboxes = {};
+
+        let paymentSettings = {
+            bankName: 'ธนาคารกรุงไทย', bankAccName: 'ร้านไฮเดย์แมตทีเรียล', bankNo: '123-4-56789-0', bankQr: 'https://placehold.co/300x300/00A3E0/FFFFFF?text=Bank+QR',
+            walletAccName: 'ร้านไฮเดย์แมตทีเรียล', walletNo: '081-234-5678', walletQr: 'https://placehold.co/300x300/FF6B00/FFFFFF?text=TrueMoney+QR',
+            promptpayNo: '0812345678'
+        };
+
+        let bannerSettings = {
+            imageUrl: 'https://s13.gifyu.com/images/bucSj.jpg'
+        };
+
+        let unsubscribeOrders = null;
+        let initialOrdersLoad = true;
+
+
+        // ==========================================
+        // ฟังก์ชันระบบแจ้งเตือน และอัปเดตระบบ
+        // ==========================================
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgColor = 'bg-gray-800';
+            let icon = '<i class="fa-solid fa-circle-info text-blue-400"></i>';
+            
+            if(type === 'success') {
+                bgColor = 'bg-emerald-700';
+                icon = '<i class="fa-solid fa-circle-check text-emerald-300"></i>';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-600';
+                icon = '<i class="fa-solid fa-circle-xmark text-red-200"></i>';
+            }
+
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-xs sm:text-sm transform transition-all duration-300 translate-y-4 opacity-0`;
+            toast.innerHTML = `${icon} <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Background Music Autoplay on any touch/click ---
+        function initBackgroundMusicListener() {
+            const bgMusic = document.getElementById('bg-music');
+            if(!bgMusic) return;
+
+            const startAudioOnInteraction = () => {
+                if (backgroundMusicPlaying && bgMusic.paused) {
+                    bgMusic.play().then(() => {
+                        // Successfully started playing
+                        document.removeEventListener('click', startAudioOnInteraction);
+                        document.removeEventListener('touchstart', startAudioOnInteraction);
+                        document.removeEventListener('keydown', startAudioOnInteraction);
+                    }).catch(err => {
+                        console.log('Autoplay prevented or waiting for interaction:', err);
+                    });
+                }
+            };
+
+            document.addEventListener('click', startAudioOnInteraction, { once: false });
+            document.addEventListener('touchstart', startAudioOnInteraction, { once: false });
+            document.addEventListener('keydown', startAudioOnInteraction, { once: false });
+        }
+
+        function toggleBackgroundMusic() {
+            const bgMusic = document.getElementById('bg-music');
+            const btn = document.getElementById('admin-bg-music-toggle-btn');
+            const icon = document.getElementById('admin-bg-music-icon');
+            const text = document.getElementById('admin-bg-music-text');
+
+            backgroundMusicPlaying = !backgroundMusicPlaying;
+
+            if (backgroundMusicPlaying) {
+                bgMusic.play().catch(e => console.log(e));
+                btn.className = 'px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5';
+                icon.className = 'fa-solid fa-volume-high';
+                text.textContent = 'เปิดเสียงเพลงอยู่';
+                showToast('เปิดเสียงเพลงประกอบเว็บไซต์แล้ว', 'success');
+            } else {
+                bgMusic.pause();
+                btn.className = 'px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5';
+                icon.className = 'fa-solid fa-volume-xmark';
+                text.textContent = 'ปิดเสียงเพลงอยู่';
+                showToast('ปิดเสียงเพลงประกอบเว็บไซต์แล้ว', 'info');
+            }
+        }
+
+        function applyFilters() {
+            renderProductsGrid();
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('level-input').value = '';
+            document.getElementById('category-select').value = 'ALL';
+            renderProductsGrid();
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).catch(err => {
+                console.error('Failed to copy text: ', err);
+                showToast('ไม่สามารถคัดลอกได้', 'error');
+            });
+        }
+
+        function applyBannerSettingsUI() {
+            const imgUrl = bannerSettings.imageUrl || (typeof bannerSettings === 'string' ? bannerSettings : 'https://s13.gifyu.com/images/bucSj.jpg');
+            const bannerImg = document.getElementById('hero-banner-img');
+            if(bannerImg) {
+                bannerImg.src = imgUrl;
+            }
+            if(document.getElementById('setting-hero-image')) {
+                document.getElementById('setting-hero-image').value = imgUrl;
+            }
+        }
+
+        function applyPaymentSettingsUI() {
+            if(document.getElementById('pay-ktb-bankname')) {
+                document.getElementById('pay-ktb-bankname').textContent = paymentSettings.bankName;
+                document.getElementById('pay-ktb-name').textContent = paymentSettings.bankAccName;
+                document.getElementById('pay-ktb-no').textContent = paymentSettings.bankNo;
+                document.getElementById('pay-ktb-qr').src = paymentSettings.bankQr;
+                
+                document.getElementById('pay-truemoney-name').textContent = paymentSettings.walletAccName;
+                document.getElementById('pay-truemoney-no').textContent = paymentSettings.walletNo;
+                document.getElementById('pay-truemoney-qr').src = paymentSettings.walletQr;
+                const promptPayEl = document.getElementById('pay-promptpay-no');
+                if (promptPayEl) promptPayEl.textContent = formatPromptPayDisplay(paymentSettings.promptpayNo || paymentSettings.walletNo || '');
+
+            }
+
+            if(document.getElementById('setting-bank-name')) {
+                document.getElementById('setting-bank-name').value = paymentSettings.bankName;
+                document.getElementById('setting-bank-acc-name').value = paymentSettings.bankAccName;
+                document.getElementById('setting-bank-no').value = paymentSettings.bankNo;
+                document.getElementById('setting-bank-qr').value = paymentSettings.bankQr;
+                
+                document.getElementById('setting-wallet-acc-name').value = paymentSettings.walletAccName;
+                document.getElementById('setting-wallet-no').value = paymentSettings.walletNo;
+                document.getElementById('setting-wallet-qr').value = paymentSettings.walletQr;
+                const promptSetting = document.getElementById('setting-promptpay-no');
+                if (promptSetting) promptSetting.value = paymentSettings.promptpayNo || paymentSettings.walletNo || '';
+            }
+        }
+
+        async function saveBannerSettings() {
+            const imageUrl = document.getElementById('setting-hero-image').value.trim();
+            if(!imageUrl) return showToast('กรุณากรอก URL รูปภาพ Banner', 'error');
+            
+            bannerSettings = { imageUrl };
+            applyBannerSettingsUI();
+            await saveSettingsToFirestore();
+            showToast('บันทึกการตั้งค่า Banner สำเร็จ', 'success');
+        }
+
+        async function savePaymentSettings() {
+            paymentSettings = {
+                bankName: document.getElementById('setting-bank-name').value.trim() || 'ธนาคาร',
+                bankAccName: document.getElementById('setting-bank-acc-name').value.trim(),
+                bankNo: document.getElementById('setting-bank-no').value.trim(),
+                bankQr: document.getElementById('setting-bank-qr').value.trim(),
+                walletAccName: document.getElementById('setting-wallet-acc-name').value.trim(),
+                walletNo: document.getElementById('setting-wallet-no').value.trim(),
+                walletQr: document.getElementById('setting-wallet-qr').value.trim(),
+                promptpayNo: document.getElementById('setting-promptpay-no').value.trim()
+            };
+            applyPaymentSettingsUI();
+            await saveSettingsToFirestore();
+            showToast('บันทึกช่องทางชำระเงินสำเร็จ', 'success');
+        }
+
+        async function clearAllOrders() {
+            // Replaced window.confirm() with safe UI action/toast confirmation or direct action
+            showToast('กำลังล้างประวัติคำสั่งซื้อ...', 'info');
+            try {
+                const snapshot = await db.collection('orders').get();
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+                showToast('ล้างประวัติออเดอร์ทั้งหมดแล้ว', 'success');
+            } catch (error) {
+                console.error("Error clearing orders", error);
+                showToast('ลบออเดอร์ไม่สำเร็จ', 'error');
+            }
+        }
+
+
+        // ==========================================
+        // ฟังก์ชันหลักดั้งเดิม
+        // ==========================================
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            initBackgroundMusicListener();
+
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    isAdminLoggedIn = true;
+                    updateAdminStatusUI();
+                    startListeningToOrders();
+                } else {
+                    isAdminLoggedIn = false;
+                    updateAdminStatusUI();
+                    if(unsubscribeOrders) unsubscribeOrders();
+                }
+            });
+
+            await loadSettings();
+            await loadProducts();
+            updateCartUI();
+        });
+
+        async function loadSettings() {
+            try {
+                const doc = await db.collection('settings').doc('master').get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data.payment) paymentSettings = data.payment;
+                    if (data.banner) bannerSettings = data.banner;
+                } else {
+                    await saveSettingsToFirestore();
+                }
+                applyBannerSettingsUI();
+                applyPaymentSettingsUI();
+            } catch (error) {
+                console.error("Error loading settings:", error);
+                paymentSettings = JSON.parse(localStorage.getItem('hayday_payment_config')) || paymentSettings;
+                bannerSettings = JSON.parse(localStorage.getItem('hayday_banner_config')) || bannerSettings;
+                applyBannerSettingsUI();
+                applyPaymentSettingsUI();
+            }
+        }
+
+        async function saveSettingsToFirestore() {
+             try {
+                await db.collection('settings').doc('master').set({
+                    payment: paymentSettings,
+                    banner: bannerSettings
+                });
+            } catch (error) {
+                console.error("Error saving settings:", error);
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const snapshot = await db.collection('products').get();
+                if (snapshot.empty) {
+                    const batch = db.batch();
+                    DEFAULT_PRODUCTS.forEach(p => {
+                        const docRef = db.collection('products').doc(p.id);
+                        batch.set(docRef, p);
+                    });
+                    await batch.commit();
+                    products = [...DEFAULT_PRODUCTS];
+                } else {
+                    products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                }
+                initQtyMap();
+                renderProductsGrid();
+                if(isAdminLoggedIn) renderAdminProductsTable();
+            } catch (error) {
+                console.error("Error loading products:", error);
+                products = JSON.parse(localStorage.getItem('hayday_products')) || DEFAULT_PRODUCTS;
+                initQtyMap();
+                renderProductsGrid();
+            }
+        }
+
+        function startListeningToOrders() {
+            if (unsubscribeOrders) unsubscribeOrders();
+            initialOrdersLoad = true;
+            unsubscribeOrders = db.collection('orders')
+                .orderBy('timestamp', 'desc')
+                .limit(50)
+                .onSnapshot((snapshot) => {
+                    orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderAdminOrdersTable();
+
+                    if (!initialOrdersLoad && snapshot.docChanges().length > 0) {
+                        const newDocs = snapshot.docChanges().filter(change => change.type === "added");
+                        if(newDocs.length > 0) {
+                            triggerAdminOrderNotification(newDocs[0].doc.data());
+                        }
+                    }
+                    initialOrdersLoad = false;
+                }, (error) => {
+                    console.error("Error listening to orders:", error);
+                });
+        }
+
+
+        function initQtyMap() {
+            products.forEach(p => {
+                if (!productQtyMap[p.id]) {
+                    const tiers = getPriceTiers(p);
+                    productQtyMap[p.id] = 1;
+                }
+            });
+        }
+
+        function renderProductsGrid() {
+            const grid = document.getElementById('product-grid');
+            const emptyState = document.getElementById('empty-state');
+            const searchVal = (document.getElementById('search-input').value || '').toLowerCase().trim();
+            const levelVal = parseInt(document.getElementById('level-input').value) || 9999;
+            const categoryVal = document.getElementById('category-select').value;
+
+            const filtered = products.filter(p => {
+                const matchName = p.name.toLowerCase().includes(searchVal);
+                const matchLevel = p.level <= levelVal;
+                const matchCategory = categoryVal === 'ALL' || p.category === categoryVal;
+                return matchName && matchLevel && matchCategory;
+            }).sort((a, b) => {
+                // เรียงสินค้าตามเลเวลจากน้อยไปมากเสมอ
+                const levelA = Number(a.level) || 999999;
+                const levelB = Number(b.level) || 999999;
+                if (levelA !== levelB) return levelA - levelB;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+            });
+
+            document.getElementById('product-count-label').textContent = `แสดง ${filtered.length} จาก ${products.length} รายการ`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = filtered.map(p => {
+                const qty = productQtyMap[p.id] || 1;
+                const isChecked = !!selectedProductCheckboxes[p.id];
+                const isOutOfStock = p.stock <= 0;
+
+                return `
+                <div class="bg-white rounded-2xl border ${isChecked ? 'border-brand-blue ring-2 ring-brand-blue/20 bg-blue-50/20' : 'border-gray-100'} shadow-sm hover:shadow-md transition duration-200 flex flex-col justify-between overflow-hidden relative group">
+                    <div class="absolute top-2.5 right-2.5 z-10 flex items-center">
+                        <label class="cursor-pointer flex items-center justify-center p-1 bg-white/90 backdrop-blur-md rounded-xl shadow-xs border border-gray-200 hover:border-brand-blue transition">
+                            <input type="checkbox" onchange="toggleProductCheckbox('${p.id}', this.checked)" ${isChecked ? 'checked' : ''} class="w-4 h-4 rounded text-brand-blue focus:ring-brand-blue cursor-pointer">
+                        </label>
+                    </div>
+
+                    <div class="p-3 pb-0 flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded-md ${getCategoryBadgeColor(p.category)}">
+                            ${getCategoryLabel(p.category)}
+                        </span>
+                        <span class="text-[9px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60">
+                            Lv. ${p.level}
+                        </span>
+                    </div>
+
+                    <div class="p-3 flex flex-col items-center text-center">
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-50 rounded-2xl overflow-hidden mb-2 p-1 border border-gray-100 group-hover:scale-105 transition duration-200 flex items-center justify-center">
+                            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://placehold.co/200x200/FEFCBF/C53030?text=HayDay'" class="w-full h-full object-cover rounded-xl">
+                        </div>
+                        <h3 class="font-bold text-gray-800 text-xs sm:text-sm line-clamp-1">${p.name}</h3>
+                        <div class="mt-0.5 text-gray-500 font-semibold text-[10px] sm:text-xs">
+                            ${formatBaht(p.price)} ฿ / ชิ้น
+                        </div>
+                        <span class="text-[10px] ${isOutOfStock ? 'text-red-500 font-bold' : 'text-gray-500'} mt-0.5">
+                            ${isOutOfStock ? '❌ สินค้าหมด' : `คงเหลือ ${p.stock} ชิ้น`}
+                        </span>
+                    </div>
+
+                    <div class="p-2.5 bg-gray-50/80 border-t border-gray-100 flex flex-col gap-2">
+                        <div class="flex items-center justify-between bg-white border border-gray-200 rounded-xl p-0.5">
+                            <button onclick="changeQtyInput('${p.id}', -1)" ${isOutOfStock ? 'disabled' : ''} class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold transition active:scale-95 disabled:opacity-40">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <div class="flex-grow flex items-center justify-center px-1">
+                                <input type="number" id="qty-input-${p.id}" value="${qty}" min="1" max="${p.stock || 1}" oninput="handleQtyInputChange('${p.id}', this.value, ${p.stock})" ${isOutOfStock ? 'disabled' : ''} class="w-full text-center font-extrabold text-xs sm:text-sm text-gray-800 focus:outline-none bg-transparent">
+                            </div>
+                            <button onclick="changeQtyInput('${p.id}', 1)" ${isOutOfStock ? 'disabled' : ''} class="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold transition active:scale-95 disabled:opacity-40">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-1">
+                            ${getPriceTiers(p).map(t => `<button onclick="setQtyPreset('${p.id}', ${t.qty}, ${p.stock})" ${isOutOfStock || t.qty > p.stock ? 'disabled' : ''} class="py-1 bg-white hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-md text-[9px] font-bold transition disabled:opacity-40">
+                                ${t.qty.toLocaleString()} ชิ้น = ${formatBaht(t.price)} ฿
+                            </button>`).join('')}
+                        </div>
+
+                        <div class="text-center text-[9px] text-gray-400">จำนวนอื่นจะคิดตามราคาต่อชิ้น ${formatBaht(p.price)} ฿ / ชิ้น</div>
+
+                        <button onclick="addSingleProductToCart('${p.id}')" ${isOutOfStock ? 'disabled' : ''} class="w-full py-1.5 bg-brand-red hover:bg-brand-redDark disabled:bg-gray-300 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5 active:scale-95">
+                            <i class="fa-solid fa-cart-plus"></i>
+                            <span>ใส่ตะกร้า</span>
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            updateBatchBarUI();
+        }
+
+        function getCategoryLabel(cat) {
+            switch(cat) {
+                case 'PRODUCTS': return 'สินค้าหมวดอื่น ๆ';
+                case 'BARN': return 'วัตถุดิบ ขนม แร่';
+                case 'SILO': return 'ผัก ผลไม้';
+                case 'LAND': return 'ทำลายล้าง';
+                case 'TOWN': return 'อาหารสัตว์';
+                case 'COINS': return 'รับวนเหรียญ';
+                case 'DIAMONDS': return 'รับเติมเพชร';
+                case 'BARN_UPGRADE': return 'ชุดอัพโรงนา';
+                case 'SILO_UPGRADE': return 'ชุดอัพยุ้งฉาง';
+                case 'LAND_EXPAND': return 'ชุดขยายพื้นที่';
+                default: return 'วัตถุดิบ ขนม แร่';
+            }
+        }
+
+        function getCategoryBadgeColor(cat) {
+            switch(cat) {
+                case 'BARN': return 'bg-red-100 text-red-800';
+                case 'SILO': return 'bg-amber-100 text-amber-800';
+                case 'LAND': return 'bg-emerald-100 text-emerald-800';
+                case 'TOWN': return 'bg-blue-100 text-blue-800';
+                case 'COINS': return 'bg-yellow-100 text-yellow-800';
+                case 'DIAMONDS': return 'bg-purple-100 text-purple-800';
+                case 'BARN_UPGRADE': return 'bg-orange-100 text-orange-800';
+                case 'SILO_UPGRADE': return 'bg-teal-100 text-teal-800';
+                case 'LAND_EXPAND': return 'bg-green-100 text-green-800';
+                default: return 'bg-purple-100 text-purple-800';
+            }
+        }
+
+        function getPriceTiers(product) {
+            if (!product || !Array.isArray(product.priceTiers)) return [];
+            return product.priceTiers
+                .filter(t => Number(t.qty) > 0 && Number(t.price) >= 0)
+                .map(t => ({ qty: Number(t.qty), price: Number(t.price) }))
+                .sort((a, b) => a.qty - b.qty);
+        }
+
+        function getPricingMode(product) {
+            return 'both';
+        }
+
+        function hasPackagePricing(product) {
+            return getPriceTiers(product).length > 0;
+        }
+
+        function getPackagePrice(product, qty) {
+            const tiers = getPriceTiers(product);
+            if (!tiers.length) return Number(product.price || 0) * Number(qty || 0);
+            const exact = tiers.find(t => t.qty === Number(qty));
+            return exact ? exact.price : null;
+        }
+
+        function formatBaht(value) {
+            const n = Number(value || 0);
+            return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+        }
+
+        function changeQtyInput(id, delta) {
+            const product = products.find(p => p.id === id);
+            if (!product || product.stock <= 0) return;
+            let current = Number(productQtyMap[id]) || 1;
+            let nextVal = current + delta;
+            if (nextVal < 1) nextVal = 1;
+            if (nextVal > product.stock) nextVal = product.stock;
+            productQtyMap[id] = nextVal;
+            const inputEl = document.getElementById(`qty-input-${id}`);
+            if (inputEl) inputEl.value = nextVal;
+            updateBatchBarUI();
+        }
+
+        function handleQtyInputChange(id, valStr, maxStock) {
+            let val = parseInt(valStr);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > maxStock) val = maxStock;
+            productQtyMap[id] = val;
+            updateBatchBarUI();
+        }
+
+        function setQtyPreset(id, qtyVal, maxStock) {
+            if (maxStock <= 0) return;
+            let val = parseInt(qtyVal);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > maxStock) return showToast('แพ็กนี้มีจำนวนเกินสต็อก', 'error');
+            productQtyMap[id] = val;
+            const inputEl = document.getElementById(`qty-input-${id}`);
+            if (inputEl) inputEl.value = val;
+            updateBatchBarUI();
+            showToast(`เลือก ${val.toLocaleString()} ชิ้นแล้ว`, 'info');
+        }
+
+        function toggleProductCheckbox(id, isChecked) {
+            selectedProductCheckboxes[id] = isChecked;
+            renderProductsGrid();
+        }
+
+        function toggleSelectAllProducts() {
+            const allSelected = products.every(p => selectedProductCheckboxes[p.id]);
+            products.forEach(p => {
+                if (p.stock > 0) {
+                    selectedProductCheckboxes[p.id] = !allSelected;
+                }
+            });
+            document.getElementById('select-all-btn-text').textContent = !allSelected ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด';
+            renderProductsGrid();
+        }
+
+        function clearSelectedProducts() {
+            selectedProductCheckboxes = {};
+            document.getElementById('select-all-btn-text').textContent = 'เลือกทั้งหมด';
+            renderProductsGrid();
+        }
+
+        function updateBatchBarUI() {
+            const batchBar = document.getElementById('batch-add-bar');
+            const selectedIds = Object.keys(selectedProductCheckboxes).filter(id => selectedProductCheckboxes[id]);
+            
+            let totalPieces = 0;
+            selectedIds.forEach(id => {
+                totalPieces += (productQtyMap[id] || 1);
+            });
+
+            document.getElementById('batch-count').textContent = selectedIds.length;
+            document.getElementById('batch-total-pieces').textContent = totalPieces;
+
+            if (selectedIds.length > 0) {
+                batchBar.classList.remove('translate-y-32', 'opacity-0', 'pointer-events-none');
+            } else {
+                batchBar.classList.add('translate-y-32', 'opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function addSingleProductToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || product.stock <= 0) return;
+            
+            const qty = productQtyMap[productId] || 1;
+            addToCartLogic(product, qty);
+            showToast(`เพิ่ม ${product.name} (${qty} ชิ้น) ลงตะกร้าแล้ว`, 'success');
+        }
+
+        function addBatchSelectedToCart() {
+            const selectedIds = Object.keys(selectedProductCheckboxes).filter(id => selectedProductCheckboxes[id]);
+            if (selectedIds.length === 0) return;
+
+            let totalItemsAdded = 0;
+            selectedIds.forEach(id => {
+                const product = products.find(p => p.id === id);
+                if (product && product.stock > 0) {
+                    const qty = productQtyMap[id] || 1;
+                    addToCartLogic(product, qty);
+                    totalItemsAdded += qty;
+                }
+            });
+
+            showToast(`เพิ่มสินค้า ${selectedIds.length} รายการ (${totalItemsAdded} ชิ้น) ลงตะกร้าแล้ว`, 'success');
+            clearSelectedProducts();
+            toggleCartDrawer(true);
+        }
+
+        function addToCartLogic(product, qty) {
+            qty = Number(qty) || 1;
+            if (qty < 1) qty = 1;
+            if (qty > product.stock) qty = product.stock;
+
+            const tiers = getPriceTiers(product);
+            const packageTier = tiers.find(t => t.qty === qty);
+            const isPackage = !!packageTier;
+            const linePrice = isPackage ? packageTier.price : Number(product.price || 0) * qty;
+
+            const existingIndex = cart.findIndex(item => item.id === product.id && !!item.packagePricing === isPackage && (!isPackage || item.packageQty === qty));
+            if (existingIndex > -1) {
+                if (isPackage) {
+                    cart[existingIndex].price = packageTier.price;
+                } else {
+                    let newQty = cart[existingIndex].qty + qty;
+                    if (newQty > product.stock) newQty = product.stock;
+                    cart[existingIndex].qty = newQty;
+                }
+            } else {
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: isPackage ? packageTier.price : Number(product.price || 0),
+                    qty,
+                    image: product.image,
+                    maxStock: product.stock,
+                    packagePricing: isPackage,
+                    packageQty: isPackage ? qty : null,
+                    lineTotal: linePrice
+                });
+            }
+            saveCartState();
+            updateCartUI();
+        }
+
+        function saveCartState() {
+            localStorage.setItem('hayday_cart', JSON.stringify(cart));
+        }
+
+        function toggleCartDrawer(forceOpen = false) {
+            const drawer = document.getElementById('cart-drawer');
+            if (forceOpen) {
+                drawer.classList.remove('hidden');
+            } else {
+                drawer.classList.toggle('hidden');
+            }
+        }
+
+        function updateCartUI() {
+            const badge = document.getElementById('cart-count-badge');
+            const container = document.getElementById('cart-items-container');
+            const subtotalEl = document.getElementById('cart-subtotal');
+            const totalEl = document.getElementById('cart-total');
+
+            const totalCount = cart.reduce((sum, item) => sum + item.qty, 0);
+            badge.textContent = totalCount;
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-gray-400 space-y-2">
+                        <i class="fa-solid fa-basket-shopping text-4xl text-gray-200"></i>
+                        <p class="text-xs sm:text-sm">ตะกร้าสินค้ายังว่างเปล่า</p>
+                        <p class="text-[10px] text-gray-400">เลือกสินค้าและระบุจำนวนที่ต้องการเพื่อเริ่มสั่งซื้อ</p>
+                    </div>
+                `;
+                subtotalEl.textContent = '0 ฿';
+                totalEl.textContent = '0 ฿';
+                return;
+            }
+
+            let totalCost = 0;
+            container.innerHTML = cart.map((item, idx) => {
+                const itemTotal = item.packagePricing ? item.price : item.price * item.qty;
+                totalCost += itemTotal;
+                return `
+                <div class="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex items-center justify-between gap-3">
+                    <img src="${item.image}" alt="${item.name}" onerror="this.src='https://placehold.co/100x100/FEFCBF/C53030?text=HayDay'" class="w-12 h-12 object-cover rounded-xl shrink-0 border bg-white">
+                    <div class="flex-grow min-w-0">
+                        <h4 class="font-bold text-xs text-gray-800 truncate">${item.name}</h4>
+                        <p class="text-[11px] text-brand-red font-semibold">${item.packagePricing ? (item.qty === 1 ? `${item.price} ฿ / ชิ้น` : `${item.qty} ชิ้น / แพ็ก`) : `${item.price} ฿ / ชิ้น`}</p>
+                        
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <button onclick="updateCartItemQty(${idx}, -1)" class="w-5 h-5 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-600 hover:bg-gray-100 flex items-center justify-center">
+                                -
+                            </button>
+                            <span class="font-bold text-xs text-gray-800 px-1">${item.qty}</span>
+                            <button onclick="updateCartItemQty(${idx}, 1)" class="w-5 h-5 bg-white border border-gray-200 rounded text-[10px] font-bold text-gray-600 hover:bg-gray-100 flex items-center justify-center">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <p class="font-extrabold text-xs text-gray-800">${itemTotal} ฿</p>
+                        <button onclick="removeCartItem(${idx})" class="text-[10px] text-red-500 hover:underline mt-1">
+                            <i class="fa-solid fa-trash"></i> ลบ
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            subtotalEl.textContent = `${totalCost} ฿`;
+            totalEl.textContent = `${totalCost} ฿`;
+        }
+
+        function updateCartItemQty(index, delta) {
+            if (!cart[index]) return;
+            const item = cart[index];
+            if (item.packagePricing) {
+                const product = products.find(p => p.id === item.id);
+                const tiers = getPriceTiers(product);
+                if (!tiers.length) {
+                    item.packagePricing = false;
+                    item.packageQty = null;
+                    item.price = Number(product?.price || item.price || 0);
+                    updateCartItemQty(index, delta);
+                    return;
+                }
+                let tierIndex = tiers.findIndex(t => t.qty === Number(item.qty));
+                if (tierIndex < 0) tierIndex = 0;
+                tierIndex += delta;
+                if (tierIndex < 0) { cart.splice(index, 1); }
+                else if (tierIndex >= tiers.length) { showToast('ถึงแพ็กสูงสุดแล้ว', 'info'); return; }
+                else if (tiers[tierIndex].qty > item.maxStock) { showToast('แพ็กนี้มีจำนวนเกินสต็อก', 'info'); return; }
+                else { item.qty = tiers[tierIndex].qty; item.price = tiers[tierIndex].price; item.packageQty = item.qty; }
+            } else {
+                item.qty += delta;
+                if (item.qty <= 0) cart.splice(index, 1);
+                else if (item.qty > item.maxStock) { item.qty = item.maxStock; showToast(`สต็อกสูงสุดคือ ${item.maxStock} ชิ้น`, 'info'); }
+            }
+            saveCartState();
+            updateCartUI();
+        }
+
+        function removeCartItem(index) {
+            cart.splice(index, 1);
+            saveCartState();
+            updateCartUI();
+        }
+
+        async function processCheckout() {
+            if (cart.length === 0) {
+                showToast('โปรดเลือกสินค้าลงตะกร้าก่อนทำรายการ', 'error');
+                return;
+            }
+
+            const nameInput = document.getElementById('cust-name-input').value.trim();
+            const tagInput = document.getElementById('cust-tag-input').value.trim();
+
+            if (!nameInput || !tagInput) {
+                showToast('กรุณากรอกชื่อและแท็กฟาร์ม/ไลน์ติดต่อให้ครบถ้วน', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('checkout-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังประมวลผล...';
+
+            try {
+                const orderId = 'HD-' + Math.floor(100000 + Math.random() * 900000);
+                const orderDate = new Date().toLocaleString('th-TH');
+                const totalAmount = cart.reduce((sum, item) => sum + (item.packagePricing ? item.price : item.price * item.qty), 0);
+
+                const newOrder = {
+                    id: orderId,
+                    date: orderDate,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    customerName: nameInput,
+                    customerTag: tagInput,
+                    items: [...cart],
+                    total: totalAmount,
+                    status: 'PENDING'
+                };
+
+                // ตรวจสอบเอกสารสินค้าจาก Firestore จริงก่อนสร้างออเดอร์
+                // ป้องกันกรณีหน้าเว็บยังแสดงสินค้าจากข้อมูลเก่า/localStorage
+                // แต่เอกสาร product ถูกลบไปแล้ว (จะทำให้ batch.update ขึ้น not-found)
+                const stockByProduct = {};
+                for (const cartItem of cart) {
+                    stockByProduct[cartItem.id] = (stockByProduct[cartItem.id] || 0) + Number(cartItem.qty || 0);
+                }
+
+                const missingProducts = [];
+                const outOfStockProducts = [];
+                const productSnapshots = {};
+
+                for (const [productId, totalQty] of Object.entries(stockByProduct)) {
+                    const snap = await db.collection('products').doc(productId).get();
+                    if (!snap.exists) {
+                        const cartItem = cart.find(item => item.id === productId);
+                        missingProducts.push(cartItem?.name || productId);
+                        continue;
+                    }
+
+                    const serverStock = Number(snap.data().stock || 0);
+                    productSnapshots[productId] = snap;
+                    if (serverStock < totalQty) {
+                        const cartItem = cart.find(item => item.id === productId);
+                        outOfStockProducts.push(`${cartItem?.name || productId} (เหลือ ${serverStock.toLocaleString()} ชิ้น)`);
+                    }
+                }
+
+                if (missingProducts.length > 0) {
+                    await loadProducts();
+                    showToast(`สั่งซื้อไม่ได้: สินค้า ${missingProducts.join(', ')} ไม่มีอยู่ในฐานข้อมูลแล้ว กรุณารีเฟรชหน้า/ให้แอดมินตรวจสอบสินค้า`, 'error');
+                    return;
+                }
+
+                if (outOfStockProducts.length > 0) {
+                    await loadProducts();
+                    showToast(`สต็อกไม่พอ: ${outOfStockProducts.join(', ')}`, 'error');
+                    return;
+                }
+
+                const batch = db.batch();
+                const orderRef = db.collection('orders').doc(orderId);
+                batch.set(orderRef, newOrder);
+
+                // อัปเดต product แต่ละเอกสารเพียงครั้งเดียว
+                Object.entries(stockByProduct).forEach(([productId, totalQty]) => {
+                    const productRef = db.collection('products').doc(productId);
+                    batch.update(productRef, {
+                        stock: firebase.firestore.FieldValue.increment(-totalQty)
+                    });
+                });
+
+                await batch.commit();
+
+                cart = [];
+                saveCartState();
+                updateCartUI();
+                toggleCartDrawer();
+                await loadProducts(); 
+                openReceiptModal(newOrder);
+                // สร้าง QR พร้อมเพย์ตามยอดออเดอร์ทันทีหลังยืนยันสำเร็จ
+                renderPromptPayQR('receipt-promptpay-qr', totalAmount, 'receipt-promptpay-amount');
+
+            } catch (error) {
+                console.error("Checkout failed:", error);
+                showToast(`สั่งซื้อไม่สำเร็จ: ${error.code || 'unknown-error'}${error.message ? ' — ' + error.message : ''}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check-circle text-yellow-300"></i> ยืนยันการสั่งซื้อ';
+            }
+        }
+
+        function triggerAdminOrderNotification(order) {
+            if(!isAdminLoggedIn) return;
+
+            if (adminAudioEnabled) {
+                playAdminChimeSound();
+            }
+
+            const alertBanner = document.getElementById('admin-new-order-alert');
+            document.getElementById('alert-order-id-badge').textContent = order.id;
+            alertBanner.classList.remove('hidden');
+
+            const unreadBadge = document.getElementById('admin-unread-badge');
+            if (unreadBadge) unreadBadge.classList.remove('hidden');
+
+            const tabBadge = document.getElementById('tab-orders-badge');
+            if (tabBadge) {
+                tabBadge.textContent = 'NEW';
+                tabBadge.classList.remove('hidden');
+            }
+
+            showToast(`🔔 [แอดมิน] มีคำสั่งซื้อใหม่ #${order.id} เข้ามาแล้ว!`, 'success');
+        }
+
+        function playAdminChimeSound() {
+            try {
+                if (typeof Tone !== 'undefined') {
+                    Tone.start();
+                    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                    const now = Tone.now();
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "8n", now);
+                    synth.triggerAttackRelease(["G5", "C6"], "4n", now + 0.18);
+                }
+            } catch (err) {
+                console.log('Audio alert error:', err);
+            }
+        }
+
+        function closeOrderAlert() {
+            document.getElementById('admin-new-order-alert').classList.add('hidden');
+        }
+
+        function openAdminPanelAndSwitchTab(tabName) {
+            closeOrderAlert();
+            if (!isAdminLoggedIn) {
+                openAdminLoginModal();
+            } else {
+                openAdminPanelModal();
+                switchAdminTab(tabName);
+            }
+        }
+
+        function openReceiptModal(order) {
+            document.getElementById('rec-order-id').textContent = order.id;
+            document.getElementById('rec-date').textContent = order.date;
+            document.getElementById('rec-cust-name').textContent = order.customerName;
+            document.getElementById('rec-cust-tag').textContent = order.customerTag;
+            document.getElementById('rec-total-price').textContent = `${order.total} ฿`;
+
+            const itemsList = document.getElementById('rec-items-list');
+            itemsList.innerHTML = order.items.map(item => `
+                <div class="flex justify-between items-center">
+                    <span>${item.name} x${item.qty}</span>
+                    <span class="font-bold">${item.packagePricing ? item.price : item.price * item.qty} ฿</span>
+                </div>
+            `).join('');
+
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receipt-modal').classList.add('hidden');
+        }
+
+        function copyReceiptText() {
+            const orderId = document.getElementById('rec-order-id').textContent;
+            const date = document.getElementById('rec-date').textContent;
+            const name = document.getElementById('rec-cust-name').textContent;
+            const tag = document.getElementById('rec-cust-tag').textContent;
+            const total = document.getElementById('rec-total-price').textContent;
+
+            const itemsContainer = document.getElementById('rec-items-list');
+            let itemsText = '';
+            itemsContainer.querySelectorAll('div').forEach(el => {
+                itemsText += `- ${el.children[0].textContent}: ${el.children[1].textContent}\n`;
+            });
+
+            const textToCopy = 
+`=== ใบสั่งซื้อ HAY DAY ===
+เลข Order: ${orderId}
+วันที่: ${date}
+ผู้สั่งซื้อ: ${name}
+ติดต่อ/Tag: ${tag}
+------------------------
+รายการสินค้า:
+${itemsText}------------------------
+ยอดรวมสุทธิ: ${total}
+** โอนแล้วแนบสลิปให้แอดมินได้เลยนะคะ ♡**`;
+
+            copyToClipboard(textToCopy);
+            showToast('คัดลอกข้อความใบเสร็จเรียบร้อยแล้ว!', 'success');
+        }
+
+        // ==========================================
+        // Real-time clock
+        // ==========================================
+        function updateRealtimeClock() {
+            const el = document.getElementById('realtime-clock-time');
+            if (!el) return;
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            el.textContent = `${hh}:${mm}:${ss}`;
+        }
+
+        updateRealtimeClock();
+        setInterval(updateRealtimeClock, 1000);
+
+        // ==========================================
+        // PromptPay QR Generator
+        // ==========================================
+        function formatPromptPayDisplay(value) {
+            const digits = String(value || '').replace(/\D/g, '');
+            if (digits.length === 10 && digits.startsWith('0')) {
+                return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+            }
+            return value || '-';
+        }
+
+        function normalizePromptPayNumber(value) {
+            let digits = String(value || '').replace(/\D/g, '');
+            if (digits.startsWith('66') && digits.length === 11) digits = '0' + digits.slice(2);
+            if (digits.length === 10 && digits.startsWith('0')) {
+                return { type: 'mobile', value: '0066' + digits.slice(1) };
+            }
+            if (digits.length === 13) {
+                return { type: 'nationalId', value: digits };
+            }
+            return null;
+        }
+
+        function crc16ccitt(str) {
+            let crc = 0xFFFF;
+            for (let i = 0; i < str.length; i++) {
+                crc ^= str.charCodeAt(i) << 8;
+                for (let j = 0; j < 8; j++) {
+                    crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+                    crc &= 0xFFFF;
+                }
+            }
+            return crc.toString(16).toUpperCase().padStart(4, '0');
+        }
+
+        function tlv(tag, value) {
+            const text = String(value);
+            return tag + text.length.toString().padStart(2, '0') + text;
+        }
+
+        function buildPromptPayPayload(promptPayNumber, amount) {
+            const target = normalizePromptPayNumber(promptPayNumber);
+            if (!target) throw new Error('เลขพร้อมเพย์ต้องเป็นเบอร์มือถือ 10 หลัก หรือเลขประจำตัวผู้เสียภาษี 13 หลัก');
+
+            const amt = Number(amount);
+            if (!Number.isFinite(amt) || amt <= 0) throw new Error('จำนวนเงินไม่ถูกต้อง');
+
+            // PromptPay / Thai QR (EMVCo):
+            // Tag 29 must contain the complete PromptPay AID A000000677010111.
+            // Mobile number uses sub-tag 01; National/Tax ID uses sub-tag 02.
+            const merchantInfo =
+                tlv('00', 'A000000677010111') +
+                tlv(target.type === 'mobile' ? '01' : '02', target.value);
+
+            const payloadNoCrc =
+                tlv('00', '01') +
+                tlv('01', '12') +
+                tlv('29', merchantInfo) +
+                tlv('53', '764') +
+                tlv('54', amt.toFixed(2)) +
+                tlv('58', 'TH') +
+                '6304';
+            return payloadNoCrc + crc16ccitt(payloadNoCrc);
+        }
+
+        function renderPromptPayQR(containerId, amount, amountTextId) {
+            const container = document.getElementById(containerId);
+            if (!container) return false;
+
+            const target = paymentSettings.promptpayNo;
+            let payload;
+            try {
+                payload = buildPromptPayPayload(target, amount);
+            } catch (error) {
+                container.innerHTML = '<div class="text-red-500 text-xs p-4 text-center">ยังสร้าง QR ไม่ได้<br>กรุณาให้แอดมินตั้งเลขพร้อมเพย์ก่อน</div>';
+                showToast(error.message, 'error');
+                return false;
+            }
+
+            container.innerHTML = '';
+            if (typeof QRCode === 'undefined') {
+                container.innerHTML = '<div class="text-red-500 text-xs p-4">โหลดระบบ QR ไม่สำเร็จ กรุณารีเฟรชหน้า</div>';
+                return false;
+            }
+
+            new QRCode(container, {
+                text: payload,
+                width: 180,
+                height: 180,
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            if (amountTextId) {
+                const el = document.getElementById(amountTextId);
+                if (el) el.textContent = `${Number(amount).toFixed(2)} ฿`;
+            }
+            return true;
+        }
+
+        function generateManualPromptPayQR() {
+            const input = document.getElementById('manual-payment-amount');
+            const amount = Number(input.value);
+            if (!Number.isFinite(amount) || amount <= 0) {
+                showToast('กรุณากรอกจำนวนเงินที่ต้องการชำระ', 'error');
+                return;
+            }
+            const ok = renderPromptPayQR('manual-promptpay-qr', amount, 'manual-promptpay-amount');
+            if (ok) {
+                document.getElementById('manual-promptpay-qr-wrap').classList.remove('hidden');
+            }
+        }
+
+        function copyPromptPayNo() {
+            const no = paymentSettings.promptpayNo || '';
+            if (!no) return showToast('ยังไม่ได้ตั้งเลขพร้อมเพย์', 'error');
+            copyToClipboard(no);
+            showToast(`คัดลอกเลขพร้อมเพย์ (${formatPromptPayDisplay(no)}) แล้ว!`, 'success');
+        }
+
+        function openPaymentModal() {
+            document.getElementById('payment-modal').classList.remove('hidden');
+            const amountInput = document.getElementById('manual-payment-amount');
+            const qrWrap = document.getElementById('manual-promptpay-qr-wrap');
+            if (amountInput) amountInput.value = '';
+            if (qrWrap) qrWrap.classList.add('hidden');
+
+            // ถ้ามีสินค้าในตะกร้า ให้ใส่ยอดปัจจุบันไว้ให้กรอก/สร้าง QR ได้ง่าย
+            if (cart.length > 0 && amountInput) {
+                const total = cart.reduce((sum, item) => sum + (item.packagePricing ? Number(item.price) : Number(item.price) * Number(item.qty)), 0);
+                amountInput.value = total.toFixed(2);
+            }
+        }
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
+        function copyAccountNo(elementId, labelText) {
+            const no = document.getElementById(elementId).textContent.trim();
+            copyToClipboard(no);
+            showToast(`คัดลอก${labelText} (${no}) แล้ว!`, 'success');
+        }
+
+        function openOrderLookupModal() {
+            document.getElementById('order-lookup-modal').classList.remove('hidden');
+        }
+        function closeOrderLookupModal() {
+            document.getElementById('order-lookup-modal').classList.add('hidden');
+        }
+
+        async function searchOrderById() {
+            const query = document.getElementById('lookup-id-input').value.trim().toUpperCase();
+            const resultBox = document.getElementById('lookup-result-box');
+            
+            if (!query) {
+                resultBox.classList.remove('hidden');
+                resultBox.innerHTML = '<p class="text-red-500 text-center">กรุณากรอก Order ID</p>';
+                return;
+            }
+
+            resultBox.classList.remove('hidden');
+            resultBox.innerHTML = '<p class="text-gray-500 text-center py-2"><i class="fa-solid fa-spinner fa-spin"></i> กำลังค้นหา...</p>';
+
+            try {
+                const doc = await db.collection('orders').doc(query).get();
+                if (!doc.exists) {
+                     resultBox.innerHTML = '<p class="text-gray-500 text-center py-2">ไม่พบออเดอร์นี้ในระบบ</p>';
+                     return;
+                }
+
+                const found = doc.data();
+
+                let statusBadge = '<span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 font-bold">รอดำเนินการ</span>';
+                if (found.status === 'COMPLETED') statusBadge = '<span class="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">จัดส่งแล้ว</span>';
+                if (found.status === 'CANCELLED') statusBadge = '<span class="px-2 py-0.5 rounded bg-red-100 text-red-800 font-bold">ยกเลิกแล้ว</span>';
+
+                resultBox.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center border-b pb-1">
+                            <span class="font-bold text-gray-800">${found.id}</span>
+                            ${statusBadge}
+                        </div>
+                        <p><strong>ชื่อ:</strong> ${found.customerName}</p>
+                        <p><strong>Tag/Line:</strong> ${found.customerTag}</p>
+                        <p><strong>ยอดรวม:</strong> <span class="text-brand-red font-bold">${found.total} ฿</span></p>
+                        <p class="text-[10px] text-gray-400">วันที่: ${found.date}</p>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error("Error searching order", error);
+                resultBox.innerHTML = '<p class="text-red-500 text-center py-2">เกิดข้อผิดพลาดในการค้นหา</p>';
+            }
+        }
+
+        function handleAdminButtonClick() {
+            if (!isAdminLoggedIn) {
+                openAdminLoginModal();
+            } else {
+                openAdminPanelModal();
+            }
+        }
+
+        function openAdminLoginModal() {
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+        }
+        function closeAdminLoginModal() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+        }
+
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('admin-email-input').value.trim();
+            const pass = document.getElementById('admin-pass-input').value.trim();
+            const btn = document.getElementById('admin-login-btn');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...';
+
+            try {
+                await auth.signInWithEmailAndPassword(email, pass);
+                closeAdminLoginModal();
+                showToast('เข้าสู่ระบบแอดมินสำเร็จ ระบบแจ้งเตือนพร้อมทำงาน', 'success');
+            } catch (error) {
+                console.error("Login Error:", error);
+                if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+                     if (email === 'haswa5544kk@gmail.com' && pass === 'Hayday5320') {
+                         isAdminLoggedIn = true;
+                         updateAdminStatusUI();
+                         closeAdminLoginModal();
+                         startListeningToOrders();
+                         showToast('เข้าสู่ระบบแอดมิน (Offline Fallback) สำเร็จ', 'success');
+                     } else {
+                         showToast('อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'error');
+                     }
+                } else {
+                    showToast(`Error: ${error.message}`, 'error');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'เข้าสู่ระบบแอดมิน';
+            }
+        }
+
+        async function logoutAdmin() {
+            try {
+                await auth.signOut();
+                closeAdminPanel();
+                showToast('ออกจากระบบแอดมินแล้ว', 'info');
+            } catch (error) {
+                 console.error("Logout error", error);
+                 isAdminLoggedIn = false;
+                 updateAdminStatusUI();
+                 closeAdminPanel();
+                 if(unsubscribeOrders) unsubscribeOrders();
+            }
+        }
+
+        function updateAdminStatusUI() {
+            const adminNavBtn = document.getElementById('admin-nav-btn');
+            const adminIcon = document.getElementById('admin-icon');
+            const adminBtnText = document.getElementById('admin-btn-text');
+
+            if (isAdminLoggedIn) {
+                adminNavBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                adminNavBtn.classList.add('bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
+                adminIcon.className = 'fa-solid fa-user-check text-white';
+                adminBtnText.textContent = 'แอดมิน (ออนไลน์)';
+            } else {
+                adminNavBtn.className = 'relative px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition flex items-center gap-1.5 border border-gray-200 active:scale-95';
+                adminIcon.className = 'fa-solid fa-user-shield text-brand-blue';
+                adminBtnText.textContent = 'แอดมิน';
+            }
+        }
+
+        function openAdminPanelModal() {
+            if(!isAdminLoggedIn) return;
+            document.getElementById('admin-panel-modal').classList.remove('hidden');
+            renderAdminProductsTable();
+            renderAdminOrdersTable();
+            const unreadBadge = document.getElementById('admin-unread-badge');
+            if (unreadBadge) unreadBadge.classList.add('hidden');
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('admin-panel-modal').classList.add('hidden');
+        }
+
+        function toggleAdminAudioAlert() {
+            adminAudioEnabled = !adminAudioEnabled;
+            const btn = document.getElementById('admin-audio-toggle-btn');
+            const icon = document.getElementById('admin-audio-icon');
+            if (adminAudioEnabled) {
+                btn.className = 'px-2.5 py-1 text-[11px] bg-gray-800 hover:bg-gray-700 text-yellow-300 rounded-lg transition border border-gray-700 flex items-center gap-1';
+                icon.className = 'fa-solid fa-volume-high';
+                showToast('เปิดเสียงแจ้งเตือนออเดอร์ใหม่แล้ว', 'success');
+            } else {
+                btn.className = 'px-2.5 py-1 text-[11px] bg-gray-700 hover:bg-gray-600 text-gray-400 rounded-lg transition border border-gray-600 flex items-center gap-1';
+                icon.className = 'fa-solid fa-volume-xmark';
+                showToast('ปิดเสียงแจ้งเตือนออเดอร์ใหม่แล้ว', 'info');
+            }
+        }
+
+        function switchAdminTab(tabName) {
+            const tabs = ['products', 'orders', 'settings', 'payment'];
+            tabs.forEach(t => {
+                const tabEl = document.getElementById(`admin-tab-${t}`);
+                const btnEl = document.getElementById(`tab-btn-${t}`);
+                if (t === tabName) {
+                    tabEl.classList.remove('hidden');
+                    btnEl.className = 'px-3 py-2 text-xs font-bold border-b-2 border-brand-blue text-brand-blue whitespace-nowrap shrink-0 flex items-center gap-1.5';
+                } else {
+                    tabEl.classList.add('hidden');
+                    btnEl.className = 'px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent whitespace-nowrap shrink-0 flex items-center gap-1.5';
+                }
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function addNewPackageRow(prefix = 'add', qty = '', price = '') {
+            const container = document.getElementById(`${prefix}-package-rows`);
+            if (!container) return;
+            const rowId = `${prefix}-package-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+            const row = document.createElement('div');
+            row.id = rowId;
+            row.className = 'grid grid-cols-[1fr_1fr_auto] gap-2 items-end';
+            row.innerHTML = `
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1">จำนวนชิ้นในแพ็ก</label>
+                    <input type="number" min="1" step="1" value="${escapeHtml(qty)}" data-package-qty placeholder="เช่น 25" class="w-full px-2.5 py-1.5 border rounded-lg bg-white text-[11px]">
+                </div>
+                <div>
+                    <label class="block text-[10px] text-gray-500 mb-1">ราคาแพ็ก (฿)</label>
+                    <input type="number" min="0" step="0.01" value="${escapeHtml(price)}" data-package-price placeholder="เช่น 4.00" class="w-full px-2.5 py-1.5 border rounded-lg bg-white text-[11px]">
+                </div>
+                <button type="button" onclick="document.getElementById('${rowId}').remove()" class="h-[30px] px-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-[10px] font-bold hover:bg-red-100">ลบ</button>`;
+            container.appendChild(row);
+        }
+
+        function collectPackageRows(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return [];
+            const result = [], usedQty = new Set();
+            [...container.children].forEach(row => {
+                const qtyText = row.querySelector('[data-package-qty]')?.value ?? '';
+                const priceText = row.querySelector('[data-package-price]')?.value ?? '';
+                if (qtyText === '' && priceText === '') return;
+                const qty = parseInt(qtyText, 10);
+                const price = parseFloat(priceText);
+                if (!Number.isInteger(qty) || qty < 1 || isNaN(price) || price < 0) {
+                    throw new Error('แพ็กต้องระบุจำนวนชิ้นเป็นจำนวนเต็ม และราคาต้องเป็น 0 ขึ้นไป');
+                }
+                if (usedQty.has(qty)) throw new Error(`จำนวนแพ็ก ${qty.toLocaleString()} ชิ้นซ้ำกัน`);
+                usedQty.add(qty);
+                result.push({ qty, price });
+            });
+            return result.sort((a,b) => a.qty - b.qty);
+        }
+
+        function packageRowsHtml(product) {
+            const tiers = getPriceTiers(product);
+            if (!tiers.length) return `<div class="text-[10px] text-gray-400">ยังไม่ได้ตั้งราคาแพ็ก</div>`;
+            return tiers.map(t => `
+                <div data-admin-package-row class="grid grid-cols-[1fr_1fr_auto] gap-1.5 items-center">
+                    <input type="number" min="1" step="1" value="${t.qty}" data-package-qty class="w-full px-1.5 py-1 border rounded-lg text-[10px] bg-gray-50">
+                    <input type="number" min="0" step="0.01" value="${t.price}" data-package-price class="w-full px-1.5 py-1 border rounded-lg text-[10px] bg-gray-50">
+                    <button type="button" onclick="this.closest('[data-admin-package-row]').remove()" class="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold">ลบ</button>
+                </div>`).join('');
+        }
+
+        function addAdminPackageRow(productId) {
+            const container = document.getElementById(`admin-package-rows-${productId}`);
+            if (!container) return;
+            const row = document.createElement('div');
+            row.setAttribute('data-admin-package-row', '');
+            row.className = 'grid grid-cols-[1fr_1fr_auto] gap-1.5 items-center';
+            row.innerHTML = `
+                <input type="number" min="1" step="1" data-package-qty placeholder="จำนวน" class="w-full px-1.5 py-1 border rounded-lg text-[10px] bg-gray-50">
+                <input type="number" min="0" step="0.01" data-package-price placeholder="ราคา" class="w-full px-1.5 py-1 border rounded-lg text-[10px] bg-gray-50">
+                <button type="button" onclick="this.closest('[data-admin-package-row]').remove()" class="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold">ลบ</button>`;
+            container.appendChild(row);
+        }
+
+        function collectAdminPackageRows(productId) {
+            const container = document.getElementById(`admin-package-rows-${productId}`);
+            if (!container) return [];
+            const result = [], usedQty = new Set();
+            [...container.querySelectorAll('[data-admin-package-row]')].forEach(row => {
+                const qtyText = row.querySelector('[data-package-qty]')?.value ?? '';
+                const priceText = row.querySelector('[data-package-price]')?.value ?? '';
+                if (qtyText === '' && priceText === '') return;
+                const qty = parseInt(qtyText, 10);
+                const price = parseFloat(priceText);
+                if (!Number.isInteger(qty) || qty < 1 || isNaN(price) || price < 0) {
+                    throw new Error('แพ็กต้องระบุจำนวนชิ้นเป็นจำนวนเต็ม และราคาต้องเป็น 0 ขึ้นไป');
+                }
+                if (usedQty.has(qty)) throw new Error(`จำนวนแพ็ก ${qty.toLocaleString()} ชิ้นซ้ำกัน`);
+                usedQty.add(qty);
+                result.push({ qty, price });
+            });
+            return result.sort((a,b) => a.qty - b.qty);
+        }
+
+        function renderAdminProductsTable() {
+            const tbody = document.getElementById('admin-product-table-body');
+            document.getElementById('admin-prod-count').textContent = `${products.length} รายการ`;
+
+            const adminSortedProducts = [...products].sort((a, b) => {
+                const levelA = Number(a.level) || 999999;
+                const levelB = Number(b.level) || 999999;
+                if (levelA !== levelB) return levelA - levelB;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'th');
+            });
+
+            tbody.innerHTML = adminSortedProducts.map(p => `
+                <tr class="hover:bg-gray-50 transition align-top">
+                    <td class="p-3">
+                        <div class="flex items-center gap-2">
+                            <img id="admin-image-preview-${p.id}" src="${p.image}" class="w-8 h-8 object-cover rounded-lg border shrink-0 bg-white" onerror="this.src='https://placehold.co/100x100'">
+                            <div class="min-w-0">
+                                <p class="font-bold text-gray-800">${escapeHtml(p.name)}</p>
+                                <span class="text-[10px] text-gray-400">Lv. ${p.level} • ${getCategoryLabel(p.category)}</span>
+                                <input type="url" id="admin-image-${p.id}" value="${escapeHtml(p.image || '')}"
+                                       class="mt-1 w-full min-w-[220px] px-2 py-1 border rounded-lg text-[9px] bg-gray-50"
+                                       placeholder="URL รูปภาพ หรืออัปโหลดจากเครื่อง">
+                                <div class="flex items-center gap-2 mt-1">
+                                    <input type="file" id="admin-image-file-${p.id}" accept="image/*" class="hidden"
+                                           onchange="handleProductImageUpload(this, 'admin-image-${p.id}')">
+                                    <button type="button" onclick="document.getElementById('admin-image-file-${p.id}').click()"
+                                            class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-[10px] font-bold">
+                                        <i class="fa-solid fa-upload"></i> อัปโหลดจากเครื่อง
+                                    </button>
+                                    <button type="button" onclick="updateProductImage('${p.id}')"
+                                            class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[10px] font-bold">
+                                        บันทึกรูป
+                                    </button>
+                                    <span id="admin-image-status-${p.id}" class="text-[10px] text-gray-400"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3">
+                        <select id="admin-category-${p.id}" class="px-2 py-1 border rounded-lg text-xs bg-gray-50">
+                            <option value="COINS" ${p.category === 'COINS' ? 'selected' : ''}>🪙 รับวนเหรียญ</option>
+                            <option value="DIAMONDS" ${p.category === 'DIAMONDS' ? 'selected' : ''}>💎 รับเติมเพชร</option>
+                            <option value="BARN" ${p.category === 'BARN' ? 'selected' : ''}>🍭 วัตถุดิบ ขนม แร่</option>
+                            <option value="SILO" ${p.category === 'SILO' ? 'selected' : ''}>🥗 ผัก ผลไม้</option>
+                            <option value="LAND" ${p.category === 'LAND' ? 'selected' : ''}>🛠️ ทำลายล้าง</option>
+                            <option value="TOWN" ${p.category === 'TOWN' ? 'selected' : ''}>🌾 อาหารสัตว์</option>
+                            <option value="BARN_UPGRADE" ${p.category === 'BARN_UPGRADE' ? 'selected' : ''}>🏠 ชุดอัพโรงนา</option>
+                            <option value="SILO_UPGRADE" ${p.category === 'SILO_UPGRADE' ? 'selected' : ''}>🏚️ ชุดอัพยุ้งฉาง</option>
+                            <option value="LAND_EXPAND" ${p.category === 'LAND_EXPAND' ? 'selected' : ''}>🌳 ชุดขยายพื้นที่</option>
+                            <option value="PRODUCTS" ${p.category === 'PRODUCTS' ? 'selected' : ''}>📦 สินค้าหมวดอื่น ๆ</option>
+                        </select>
+                        <button onclick="updateProductCategory('${p.id}')" class="mt-1 px-2 py-1 bg-brand-blue text-white rounded-lg hover:bg-brand-blueDark transition font-semibold text-[10px]">บันทึกหมวด</button>
+                    </td>
+                    <td class="p-3">
+                        <div class="space-y-2 min-w-[280px]">
+                            <div>
+                                <label class="block text-[9px] text-gray-500 mb-1">ราคาต่อชิ้น</label>
+                                <input type="number" id="admin-price-1-${p.id}" value="${p.price ?? ''}" min="0" step="0.01" placeholder="ราคาต่อชิ้น" class="w-full px-1.5 py-1 border rounded-lg text-[10px] bg-gray-50">
+                            </div>
+                            <div class="border border-dashed border-gray-300 rounded-lg p-2 bg-gray-50/70">
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <span class="text-[9px] font-semibold text-gray-600">ราคาแพ็ก (เพิ่มได้ไม่จำกัด)</span>
+                                    <button type="button" onclick="addAdminPackageRow('${p.id}')" class="px-2 py-1 bg-brand-blue text-white rounded-lg text-[9px] font-bold">+ เพิ่มแพ็ก</button>
+                                </div>
+                                <div id="admin-package-rows-${p.id}" class="space-y-1.5">${packageRowsHtml(p)}</div>
+                            </div>
+                        </div>
+                        <button onclick="updateProductPricing('${p.id}')" class="mt-1.5 px-2.5 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-semibold text-[10px]">บันทึกราคา</button>
+                    </td>
+                    <td class="p-3"><input type="number" id="admin-stock-${p.id}" value="${p.stock}" min="0" class="w-20 px-2 py-1 border rounded-lg text-xs bg-gray-50 font-bold"></td>
+                    <td class="p-3 text-center space-y-1">
+                        <button onclick="updateProductStock('${p.id}')" class="px-2.5 py-1 bg-brand-blue text-white rounded-lg hover:bg-brand-blueDark transition font-semibold text-[10px]">อัปเดตสต็อก</button>
+                        <button onclick="deleteProduct('${p.id}')" class="px-2.5 py-1 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition font-semibold text-[10px]">ลบ</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function updateProductCategory(id) {
+            const select = document.getElementById(`admin-category-${id}`);
+            const category = select ? select.value : '';
+            if (!category) return showToast('กรุณาเลือกหมวดหมู่', 'error');
+
+            try {
+                await db.collection('products').doc(id).update({ category });
+                showToast('เปลี่ยนหมวดหมู่สำเร็จ', 'success');
+                await loadProducts();
+            } catch (error) {
+                console.error('Error updating product category', error);
+                showToast('เปลี่ยนหมวดหมู่ไม่สำเร็จ', 'error');
+            }
+        }
+
+        async function updateProductStock(id) {
+            const input = document.getElementById(`admin-stock-${id}`);
+            const newStock = parseInt(input.value);
+            if (isNaN(newStock) || newStock < 0) return showToast('กรุณากรอกจำนวนสต็อกให้ถูกต้อง', 'error');
+
+            try {
+                await db.collection('products').doc(id).update({ stock: newStock });
+                showToast('อัปเดตสต็อกสำเร็จ', 'success');
+                await loadProducts();
+            } catch (error) {
+                console.error("Error updating stock", error);
+                showToast('อัปเดตสต็อกไม่สำเร็จ', 'error');
+            }
+        }
+
+        async function updateProductImage(id) {
+            const input = document.getElementById(`admin-image-${id}`);
+            const image = input ? input.value.trim() : '';
+            if (!image) return showToast('กรุณาใส่ URL หรืออัปโหลดรูปภาพก่อน', 'error');
+
+            // Base64 ที่อัปโหลดจากเครื่องจะถูกเก็บใน Firestore โดยตรง
+            // URL ภายนอกยังสามารถใช้ได้ตามเดิม
+            if (image.startsWith('data:') && image.length > 950000) {
+                return showToast('รูปภาพมีข้อมูลใหญ่เกินไปสำหรับ Firestore กรุณาอัปโหลดใหม่ให้ระบบบีบอัดก่อน', 'error');
+            }
+
+            try {
+                await db.collection('products').doc(id).update({ image });
+                showToast('บันทึกรูปสินค้าเรียบร้อยแล้ว', 'success');
+                await loadProducts();
+            } catch (error) {
+                console.error('Error updating product image', error);
+                showToast(`บันทึกรูปไม่สำเร็จ: ${error.code || 'unknown-error'}`, 'error');
+            }
+        }
+
+        async function updateProductPricing(id) {
+            const p1 = parseFloat(document.getElementById(`admin-price-1-${id}`)?.value);
+            if (isNaN(p1) || p1 < 0) return showToast('กรุณากรอกราคาต่อชิ้นให้ถูกต้อง', 'error');
+
+            let priceTiers;
+            try { priceTiers = collectAdminPackageRows(id); }
+            catch (error) { return showToast(error.message, 'error'); }
+
+            try {
+                await db.collection('products').doc(id).update({ price: p1, priceTiers, pricingMode: 'both' });
+                showToast(`บันทึกราคาแล้ว (${priceTiers.length} แพ็ก)`, 'success');
+                await loadProducts();
+            } catch (error) {
+                console.error('Error updating product pricing', error);
+                showToast('บันทึกราคาไม่สำเร็จ', 'error');
+            }
+        }
+
+        async function deleteProduct(id) {
+            try {
+                await db.collection('products').doc(id).delete();
+                showToast('ลบสินค้าออกจากระบบแล้ว', 'success');
+                await loadProducts();
+            } catch (error) {
+                console.error("Error deleting product", error);
+                showToast('ลบสินค้าไม่สำเร็จ', 'error');
+            }
+        }
+
+        function toggleAddPricingMode() {
+            // ระบบใหม่ใช้ทั้งราคาต่อชิ้นและราคาแพ็กพร้อมกัน ไม่ต้องเลือกโหมด
+        }
+
+        
+        // =========================================================
+        // Local product image upload -> resize/compress -> Base64
+        // เก็บ Base64 ไว้ใน Firestore โดยไม่ใช้ Firebase Storage
+        // =========================================================
+        const PRODUCT_IMAGE_MAX_BYTES = 700 * 1024; // เป้าหมายไม่เกิน ~700 KB
+        const PRODUCT_IMAGE_MAX_DIMENSION = 900;
+        const PRODUCT_IMAGE_QUALITY = 0.78;
+
+        function setProductImageStatus(inputId, message, isError = false) {
+            const statusId = inputId === 'add-prod-image'
+                ? 'add-prod-image-status'
+                : inputId.replace('admin-image-', 'admin-image-status-');
+            const el = document.getElementById(statusId);
+            if (el) {
+                el.textContent = message || '';
+                el.className = `text-[10px] ${isError ? 'text-red-500' : 'text-gray-400'}`;
+            }
+        }
+
+        function loadImageFromFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('อ่านรูปภาพไม่สำเร็จ'));
+                    img.src = reader.result;
+                };
+                reader.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function canvasToBlob(canvas, type, quality) {
+            return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+        }
+
+        async function compressProductImage(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                throw new Error('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+            }
+
+            const img = await loadImageFromFile(file);
+            const scale = Math.min(
+                1,
+                PRODUCT_IMAGE_MAX_DIMENSION / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height)
+            );
+
+            let width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+            let height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d', { alpha: false });
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // ใช้ JPEG เพื่อลดขนาดอย่างมากและทำให้ Firestore payload เล็กลง
+            let quality = PRODUCT_IMAGE_QUALITY;
+            let blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+
+            // ค่อย ๆ ลด quality หากไฟล์ยังใหญ่เกินเป้าหมาย
+            while (blob && blob.size > PRODUCT_IMAGE_MAX_BYTES && quality > 0.45) {
+                quality -= 0.06;
+                blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+            }
+
+            // หากยังใหญ่ ให้ลดมิติรูปแล้วบีบอัดอีกครั้ง
+            while (blob && blob.size > PRODUCT_IMAGE_MAX_BYTES && width > 500) {
+                width = Math.round(width * 0.85);
+                height = Math.round(height * 0.85);
+                canvas.width = width;
+                canvas.height = height;
+                const ctx2 = canvas.getContext('2d', { alpha: false });
+                ctx2.drawImage(img, 0, 0, width, height);
+                quality = 0.58;
+                blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+            }
+
+            if (!blob) throw new Error('บีบอัดรูปภาพไม่สำเร็จ');
+            if (blob.size > PRODUCT_IMAGE_MAX_BYTES) {
+                throw new Error('รูปยังมีขนาดใหญ่เกินกำหนด กรุณาเลือกรูปที่เล็กลง');
+            }
+
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('แปลงรูปเป็น Base64 ไม่สำเร็จ'));
+                reader.readAsDataURL(blob);
+            });
+
+            return {
+                dataUrl: base64,
+                bytes: blob.size,
+                width,
+                height
+            };
+        }
+
+        async function handleProductImageUpload(fileInput, targetInputId) {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+
+            setProductImageStatus(targetInputId, 'กำลังบีบอัดรูป...');
+
+            try {
+                const result = await compressProductImage(file);
+                const target = document.getElementById(targetInputId);
+                if (!target) throw new Error('ไม่พบช่องรูปภาพปลายทาง');
+
+                target.value = result.dataUrl;
+                const preview = targetInputId.startsWith('admin-image-')
+                    ? document.getElementById(`admin-image-preview-${targetInputId.replace('admin-image-', '')}`)
+                    : null;
+                if (preview) preview.src = result.dataUrl;
+
+                setProductImageStatus(
+                    targetInputId,
+                    `พร้อมใช้งาน • ${Math.round(result.bytes / 1024)} KB • ${result.width}×${result.height}px`
+                );
+                showToast('อัปโหลดและบีบอัดรูปสำเร็จแล้ว', 'success');
+            } catch (error) {
+                console.error('Product image upload error:', error);
+                fileInput.value = '';
+                setProductImageStatus(targetInputId, error.message || 'อัปโหลดรูปไม่สำเร็จ', true);
+                showToast(error.message || 'อัปโหลดรูปไม่สำเร็จ', 'error');
+            }
+        }
+
+async function handleAddNewProduct(e) {
+            e.preventDefault();
+            const name = document.getElementById('add-prod-name').value.trim();
+            const price1 = parseFloat(document.getElementById('add-prod-price-1').value);
+            const stock = parseInt(document.getElementById('add-prod-stock').value, 10);
+            const level = parseInt(document.getElementById('add-prod-level').value, 10);
+            const category = document.getElementById('add-prod-category').value;
+            const image = document.getElementById('add-prod-image').value.trim() || 'https://placehold.co/300x300/FEFCBF/C53030?text=HayDay';
+
+            if (!name) return showToast('กรุณากรอกชื่อสินค้า', 'error');
+            if (isNaN(price1) || price1 < 0) return showToast('กรุณากรอกราคาต่อชิ้นให้ถูกต้อง', 'error');
+
+            let priceTiers;
+            try { priceTiers = collectPackageRows('add-package-rows'); }
+            catch (error) { return showToast(error.message, 'error'); }
+
+            const newId = 'P' + Date.now().toString().slice(-4);
+            const newProd = { id: newId, name, price: price1, pricingMode: 'both', priceTiers, stock, level, category, image };
+
+            try {
+                await db.collection('products').doc(newId).set(newProd);
+                showToast(`เพิ่มสินค้าใหม่สำเร็จ${priceTiers.length ? ` พร้อม ${priceTiers.length} แพ็ก` : ''}!`, 'success');
+                e.target.reset();
+                document.getElementById('add-package-rows').innerHTML = '';
+                await loadProducts();
+            } catch (error) {
+                console.error("Error adding product", error);
+                showToast('เพิ่มสินค้าไม่สำเร็จ', 'error');
+            }
+        }
+
+        function renderAdminOrdersTable() {
+            const tbody = document.getElementById('admin-orders-table-body');
+            const tabBadge = document.getElementById('tab-orders-badge');
+            
+            if (orders.length > 0) {
+                tabBadge.textContent = orders.length;
+            }
+
+            if (orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400">ยังไม่มีรายการสั่งซื้อในระบบ</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => {
+                let statusSelectColor = 'bg-yellow-50 text-yellow-800 border-yellow-200';
+                if (o.status === 'COMPLETED') statusSelectColor = 'bg-green-50 text-green-800 border-green-200';
+                if (o.status === 'CANCELLED') statusSelectColor = 'bg-red-50 text-red-800 border-red-200';
+
+                const itemsSummary = o.items.map(i => `${i.name} x${i.qty}`).join(', ');
+
+                return `
+                <tr class="hover:bg-gray-50 transition align-top">
+                    <td class="p-3 font-mono font-bold text-brand-red">
+                        ${o.id}<br>
+                        <span class="text-[10px] text-gray-400 font-normal">${o.date}</span>
+                    </td>
+                    <td class="p-3">
+                        <p class="font-bold text-gray-800">${o.customerName}</p>
+                        <span class="text-[10px] bg-blue-50 text-brand-blue px-1.5 py-0.5 rounded font-mono">${o.customerTag}</span>
+                    </td>
+                    <td class="p-3 max-w-xs">
+                        <p class="text-xs text-gray-700 line-clamp-2">${itemsSummary}</p>
+                    </td>
+                    <td class="p-3 font-extrabold text-gray-900">${o.total} ฿</td>
+                    <td class="p-3">
+                        <select onchange="updateOrderStatus('${o.id}', this.value)" class="px-2 py-1 rounded-lg text-xs font-bold border ${statusSelectColor} focus:outline-none cursor-pointer">
+                            <option value="PENDING" ${o.status === 'PENDING' ? 'selected' : ''}>⏳ รอดำเนินการ</option>
+                            <option value="COMPLETED" ${o.status === 'COMPLETED' ? 'selected' : ''}>✅ จัดส่งแล้ว</option>
+                            <option value="CANCELLED" ${o.status === 'CANCELLED' ? 'selected' : ''}>❌ ยกเลิกออเดอร์</option>
+                        </select>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                await db.collection('orders').doc(orderId).update({ status: newStatus });
+                showToast(`อัปเดตสถานะออเดอร์ ${orderId} สำเร็จ`, 'success');
+            } catch (error) {
+                console.error("Error updating order status", error);
+                showToast('อัปเดตสถานะไม่สำเร็จ', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+
