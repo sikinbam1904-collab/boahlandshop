@@ -116,9 +116,15 @@
         .text-brand-red { color: var(--theme-primary) !important; }
         .text-brand-blue { color: var(--theme-surface) !important; }
         .focus\\:border-brand-blue:focus { border-color: var(--theme-surface) !important; }
+        /* Soft falling-emoji overlay: visible above the page but never blocks taps/scrolling. */
+        #emoji-rain-layer { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none; z-index: 35; opacity: .42; }
+        .emoji-rain-item { position: absolute; top: -3rem; display: block; line-height: 1; user-select: none; will-change: transform; animation-name: emoji-rain-fall; animation-timing-function: linear; animation-fill-mode: forwards; filter: saturate(.9); }
+        @keyframes emoji-rain-fall { 0% { transform: translate3d(0, -5vh, 0) rotate(0deg); } 100% { transform: translate3d(var(--drift, 0px), 115vh, 0) rotate(var(--spin, 180deg)); } }
+        @media (prefers-reduced-motion: reduce) { .emoji-rain-item { animation-duration: 12s !important; } }
     </style>
 </head>
 <body class="min-h-full flex flex-col justify-between antialiased selection:bg-yellow-200">
+    <div id="emoji-rain-layer" aria-hidden="true"></div>
 
     <!-- Background Music Audio Element -->
     <audio id="bg-music" src="https://mp3tourl.com/audio/1791980698468-b2581564-e62f-4874-a0f3-bdffec31bc49.mp3" loop preload="auto"></audio>
@@ -791,6 +797,19 @@
                     </div>
 
                     <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800"><i class="fa-solid fa-sparkles mr-1 text-pink-500"></i> อิโมจิโปรย ๆ ทั่วหน้าเว็บ</h4>
+                        <p class="text-gray-500">พิมพ์หรือวางอิโมจิที่ต้องการได้เอง 4 แบบ ให้โปรยลงมาทับหน้าเว็บแบบจาง ๆ และเปิด/ปิดเอฟเฟกต์ได้ตามต้องการ</p>
+                        <label class="flex items-center gap-2 font-semibold text-gray-700"><input type="checkbox" id="emoji-rain-enabled" class="w-4 h-4 accent-pink-500"> เปิดใช้งานอิโมจิโปรย ๆ</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <label class="block space-y-1">อิโมจิ 1<input id="emoji-rain-1" type="text" maxlength="8" value="💖" placeholder="เช่น 💖" class="w-full px-2 py-2 border rounded-xl bg-gray-50 text-2xl text-center" autocomplete="off"></label>
+                            <label class="block space-y-1">อิโมจิ 2<input id="emoji-rain-2" type="text" maxlength="8" value="🌸" placeholder="เช่น 🌸" class="w-full px-2 py-2 border rounded-xl bg-gray-50 text-2xl text-center" autocomplete="off"></label>
+                            <label class="block space-y-1">อิโมจิ 3<input id="emoji-rain-3" type="text" maxlength="8" value="✨" placeholder="เช่น ✨" class="w-full px-2 py-2 border rounded-xl bg-gray-50 text-2xl text-center" autocomplete="off"></label>
+                            <label class="block space-y-1">อิโมจิ 4<input id="emoji-rain-4" type="text" maxlength="8" value="🎀" placeholder="เช่น 🎀" class="w-full px-2 py-2 border rounded-xl bg-gray-50 text-2xl text-center" autocomplete="off"></label>
+                        </div>
+                        <div class="flex flex-wrap gap-2"><button onclick="previewEmojiRain()" class="px-4 py-2 bg-gray-100 rounded-xl font-bold">ทดลองเอฟเฟกต์</button><button onclick="saveEmojiRainSettings()" class="px-4 py-2 bg-brand-blue text-white rounded-xl font-bold">บันทึกอิโมจิ</button></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
                         <h4 class="font-bold text-sm text-gray-800"><i class="fa-solid fa-tags mr-1"></i> จัดการหมวดหมู่สินค้า</h4>
                         <form onsubmit="addCategory(event)" class="flex flex-col sm:flex-row gap-2">
                             <input id="new-category-icon" maxlength="8" placeholder="อีโมจิ เช่น 🎁" value="📦" class="w-full sm:w-24 px-3 py-2 border rounded-xl bg-gray-50">
@@ -907,6 +926,8 @@
         let themeSettings = { primary: '#E53935', accent: '#F57C00', background: '#FFF7F0', surface: '#795548' };
         let orderSoundSetting = 'classic';
         let musicUrlSetting = 'https://mp3tourl.com/audio/1791980698468-b2581564-e62f-4874-a0f3-bdffec31bc49.mp3';
+        let emojiRainSettings = { enabled: false, emojis: ['💖','🌸','✨','🎀'] };
+        let emojiRainInterval = null;
 
         let unsubscribeOrders = null;
         let initialOrdersLoad = true;
@@ -1090,6 +1111,68 @@
             await saveSettingsToFirestore();
             showToast('ลบหมวดหมู่แล้ว', 'success');
         }
+        const EMOJI_RAIN_CHOICES = ['💖','💗','💕','💘','🌸','✨','⭐','🦋','🍓','🎀','🐻','🍀','💎','🌷'];
+        function readEmojiRainForm() {
+            return {
+                enabled: !!document.getElementById('emoji-rain-enabled')?.checked,
+                emojis: [1,2,3,4].map(i => document.getElementById('emoji-rain-' + i)?.value || ['💖','🌸','✨','🎀'][i-1])
+            };
+        }
+        function applyEmojiRainSettingsUI() {
+            const settings = emojiRainSettings || { enabled:false, emojis:['💖','🌸','✨','🎀'] };
+            const enabled = document.getElementById('emoji-rain-enabled');
+            if (enabled) enabled.checked = !!settings.enabled;
+            [0,1,2,3].forEach(idx => {
+                const input = document.getElementById('emoji-rain-' + (idx+1));
+                if (input) input.value = (settings.emojis || ['💖','🌸','✨','🎀'])[idx] || ['💖','🌸','✨','🎀'][idx];
+            });
+            if (settings.enabled) startEmojiRain(); else stopEmojiRain();
+        }
+        function createFallingEmoji() {
+            const layer = document.getElementById('emoji-rain-layer');
+            if (!layer || !emojiRainSettings.enabled) return;
+            const choices = (emojiRainSettings.emojis || []).filter(Boolean);
+            if (!choices.length) return;
+            const item = document.createElement('span');
+            item.className = 'emoji-rain-item';
+            item.textContent = choices[Math.floor(Math.random() * choices.length)];
+            item.style.left = (Math.random() * 100) + 'vw';
+            item.style.fontSize = (16 + Math.random() * 17) + 'px';
+            item.style.opacity = (0.55 + Math.random() * 0.4).toFixed(2);
+            item.style.animationDuration = (6 + Math.random() * 7) + 's';
+            item.style.setProperty('--drift', ((Math.random() - 0.5) * 180) + 'px');
+            item.style.setProperty('--spin', ((Math.random() > .5 ? 1 : -1) * (180 + Math.random() * 540)) + 'deg');
+            layer.appendChild(item);
+            setTimeout(() => item.remove(), 14000);
+        }
+        function startEmojiRain() {
+            stopEmojiRain();
+            const layer = document.getElementById('emoji-rain-layer');
+            if (layer) layer.innerHTML = '';
+            if (!emojiRainSettings.enabled) return;
+            for (let i = 0; i < 10; i++) setTimeout(createFallingEmoji, i * 180);
+            emojiRainInterval = setInterval(createFallingEmoji, 420);
+        }
+        function stopEmojiRain() {
+            if (emojiRainInterval) clearInterval(emojiRainInterval);
+            emojiRainInterval = null;
+            const layer = document.getElementById('emoji-rain-layer');
+            if (layer) layer.innerHTML = '';
+        }
+        async function saveEmojiRainSettings() {
+            emojiRainSettings = readEmojiRainForm();
+            applyEmojiRainSettingsUI();
+            await saveSettingsToFirestore();
+            showToast('บันทึกอิโมจิโปรย ๆ สำเร็จ', 'success');
+        }
+        function previewEmojiRain() {
+            emojiRainSettings = readEmojiRainForm();
+            emojiRainSettings.enabled = true;
+            document.getElementById('emoji-rain-enabled').checked = true;
+            applyEmojiRainSettingsUI();
+            showToast('กำลังทดลองเอฟเฟกต์อิโมจิโปรย ๆ', 'success');
+        }
+
         function applyThemeSettingsUI() {
             const t = themeSettings || {};
             document.documentElement.style.setProperty('--theme-primary', t.primary || '#E53935');
@@ -1238,6 +1321,7 @@
                     if (data.theme) themeSettings = data.theme;
                     if (data.orderSound) orderSoundSetting = data.orderSound;
                     if (data.musicUrl) musicUrlSetting = data.musicUrl;
+                    if (data.emojiRain && typeof data.emojiRain === 'object') emojiRainSettings = data.emojiRain;
                 } else {
                     await saveSettingsToFirestore();
                 }
@@ -1248,6 +1332,7 @@
                 document.getElementById('order-sound-select').value = orderSoundSetting;
                 document.getElementById('setting-music-url').value = musicUrlSetting;
                 document.getElementById('bg-music').src = musicUrlSetting;
+                applyEmojiRainSettingsUI();
             } catch (error) {
                 console.error("Error loading settings:", error);
                 paymentSettings = JSON.parse(localStorage.getItem('hayday_payment_config')) || paymentSettings;
@@ -1256,6 +1341,7 @@
                 applyThemeSettingsUI();
                 document.getElementById('order-sound-select').value = orderSoundSetting;
                 document.getElementById('setting-music-url').value = musicUrlSetting;
+                applyEmojiRainSettingsUI();
                 applyBannerSettingsUI();
                 applyPaymentSettingsUI();
             }
@@ -1269,7 +1355,8 @@
                     categories: categorySettings,
                     theme: themeSettings,
                     orderSound: orderSoundSetting,
-                    musicUrl: musicUrlSetting
+                    musicUrl: musicUrlSetting,
+                    emojiRain: emojiRainSettings
                 }, { merge: true });
             } catch (error) {
                 console.error("Error saving settings:", error);
