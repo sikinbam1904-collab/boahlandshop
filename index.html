@@ -263,7 +263,7 @@
     <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 flex-grow w-full">
         <!-- Hero Banner Card (ส่วนหน้าปก) -->
         <div id="hero-banner-card" class="w-full rounded-2xl sm:rounded-3xl shadow-lg mb-4 sm:mb-6 overflow-hidden">
-            <img id="hero-banner-img" src="https://s15.gifyu.com/images/bWuHX.png" alt="Banner" class="w-full h-auto block rounded-2xl sm:rounded-3xl object-cover">
+            <img id="hero-banner-img" src="https://s13.gifyu.com/images/bucSj.jpg" alt="Banner" class="w-full h-auto block rounded-2xl sm:rounded-3xl object-cover">
         </div>
 
         <!-- Search & Filter Controls Section -->
@@ -2876,6 +2876,111 @@ async function handleAddNewProduct(e) {
             }
         }
     </script>
+
+<script id="boah-cute-click-sounds">
+/* BOAH STORE — cute click sounds for product images, cart actions, quantity controls and dynamic UI. */
+(function () {
+    let audioContext = null;
+    let lastPlayedAt = 0;
+    const CLICK_SOUND_ENABLED = true;
+
+    function playCuteClick() {
+        if (!CLICK_SOUND_ENABLED) return;
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            if (!audioContext) audioContext = new AudioContextClass();
+            if (audioContext.state === 'suspended') audioContext.resume();
+
+            const ctx = audioContext;
+            const now = ctx.currentTime;
+            if (now - lastPlayedAt < 0.025) return;
+            lastPlayedAt = now;
+
+            [
+                { frequency: 660, start: 0, duration: 0.055, volume: 0.045 },
+                { frequency: 880, start: 0.035, duration: 0.075, volume: 0.028 }
+            ].forEach(note => {
+                const oscillator = ctx.createOscillator();
+                const gain = ctx.createGain();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(note.frequency, now + note.start);
+                oscillator.frequency.exponentialRampToValueAtTime(
+                    note.frequency * 0.92, now + note.start + note.duration
+                );
+                gain.gain.setValueAtTime(0.0001, now + note.start);
+                gain.gain.exponentialRampToValueAtTime(note.volume, now + note.start + 0.008);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.duration);
+                oscillator.connect(gain);
+                gain.connect(ctx.destination);
+                oscillator.start(now + note.start);
+                oscillator.stop(now + note.start + note.duration + 0.01);
+            });
+        } catch (error) {
+            console.debug('BOAH click sound unavailable:', error);
+        }
+    }
+
+    // Product/quantity controls are often generated dynamically, so use delegated listeners.
+    const interactiveSelector = [
+        'button', 'a', '[role="button"]', '[role="option"]',
+        'input[type="button"]', 'input[type="submit"]',
+        'input[type="checkbox"]', 'input[type="radio"]', 'input[type="range"]',
+        'select', 'summary',
+        // Product cards, image previews, add-to-cart and quantity controls across common naming styles.
+        '[data-click-sound]', '[data-product-id]', '[data-action*="cart" i]',
+        '[class*="product-card" i]', '[class*="product-image" i]',
+        '[class*="product-img" i]', '[class*="product-photo" i]',
+        '[class*="add-to-cart" i]', '[class*="addtocart" i]',
+        '[class*="quantity" i]', '[class*="qty-" i]',
+        '[id*="add-to-cart" i]', '[id*="addtocart" i]',
+        '[id*="quantity" i]', '[id*="qty" i]'
+    ].join(',');
+
+    document.addEventListener('click', function (event) {
+        const clickedElement = event.target instanceof Element ? event.target : null;
+        if (!clickedElement) return;
+
+        // Check image clicks BEFORE returning for elements outside the regular interactive selector.
+        // This makes plain product <img> elements work even without special CSS classes.
+        const imageTarget = clickedElement.closest(
+            'img, picture, [class*="product-image" i], [class*="product-img" i], [class*="product-photo" i], [data-product-image]'
+        );
+        const target = clickedElement.closest(interactiveSelector);
+
+        if (target && (target.disabled || target.getAttribute('aria-disabled') === 'true')) return;
+        if (target && target.matches('input[type="text"], input[type="email"], input[type="password"], textarea')) return;
+
+        if (target || imageTarget) playCuteClick();
+    }, true);
+
+    // Quantity fields can be number inputs or text inputs; play on actual value changes, not every keystroke.
+    document.addEventListener('change', function (event) {
+        const target = event.target;
+        if (!target || !(target instanceof Element)) return;
+
+        const isQuantity = target.matches(
+            'input[type="number"], input[type="range"], select, ' +
+            '[name*="quantity" i], [name*="qty" i], [id*="quantity" i], [id*="qty" i], ' +
+            '[class*="quantity" i], [class*="qty" i]'
+        );
+        const isToggle = target.matches('input[type="checkbox"], input[type="radio"]');
+
+        if (isQuantity || isToggle || target.matches('select')) playCuteClick();
+    }, true);
+
+    // Some quantity controls update with arrow keys or spinner buttons.
+    document.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!target || !(target instanceof Element)) return;
+        if (!target.matches('input[type="number"], input[type="range"], [name*="quantity" i], [name*="qty" i], [id*="quantity" i], [id*="qty" i]')) return;
+        if (target.dataset.lastSoundValue === target.value) return;
+        target.dataset.lastSoundValue = target.value;
+        playCuteClick();
+    }, true);
+})();
+</script>
+
 </body>
 </html>
 
