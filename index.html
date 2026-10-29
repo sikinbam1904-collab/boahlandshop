@@ -108,6 +108,14 @@
             70% { box-shadow: 0 0 0 12px rgba(229, 62, 62, 0); }
             100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
         }
+        :root { --theme-primary:#E53935; --theme-accent:#F57C00; --theme-background:#FFF7F0; --theme-surface:#795548; }
+        body { background-color: var(--theme-background); }
+        .theme-primary-bg { background-color: var(--theme-primary) !important; }
+        button.bg-brand-red, .bg-brand-red { background-color: var(--theme-primary) !important; }
+        button.bg-brand-blue, .bg-brand-blue { background-color: var(--theme-surface) !important; }
+        .text-brand-red { color: var(--theme-primary) !important; }
+        .text-brand-blue { color: var(--theme-surface) !important; }
+        .focus\\:border-brand-blue:focus { border-color: var(--theme-surface) !important; }
     </style>
 </head>
 <body class="min-h-full flex flex-col justify-between antialiased selection:bg-yellow-200">
@@ -225,16 +233,6 @@
                     <label class="block text-[11px] sm:text-xs font-semibold text-gray-500 mb-1">หมวดหมู่สินค้า</label>
                     <select id="category-select" onchange="applyFilters()" class="w-full px-3 py-2 sm:py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue text-xs sm:text-sm transition cursor-pointer">
                         <option value="ALL">📦 ทั้งหมดทุกหมวดหมู่</option>
-                        <option value="COINS">🪙 รับวนเหรียญ</option>
-                        <option value="DIAMONDS">💎 รับเติมเพชร</option>
-                        <option value="BARN">🍭 วัตถุดิบ ขนม แร่</option>
-                        <option value="SILO">🥗 ผัก ผลไม้</option>
-                        <option value="LAND">🛠️ ทำลายล้าง</option>
-                        <option value="TOWN">🌾 อาหารสัตว์</option>
-                        <option value="BARN_UPGRADE">🏠 ชุดอัพโรงนา</option>
-                        <option value="SILO_UPGRADE">🏚️ ชุดอัพยุ้งฉาง</option>
-                        <option value="LAND_EXPAND">🌳 ชุดขยายพื้นที่</option>
-                        <option value="PRODUCTS">📦 สินค้าหมวดอื่น ๆ</option>
                     </select>
                 </div>
             </div>
@@ -658,16 +656,7 @@
                             <div>
                                 <label class="block text-gray-600 mb-1">หมวดหมู่</label>
                                 <select id="add-prod-category" class="w-full px-2 py-1.5 border rounded-xl bg-gray-50">
-                                    <option value="COINS">🪙 รับวนเหรียญ</option>
-                                    <option value="DIAMONDS">💎 รับเติมเพชร</option>
-                                    <option value="BARN">🍭 วัตถุดิบ ขนม แร่</option>
-                                    <option value="SILO">🥗 ผัก ผลไม้</option>
-                                    <option value="LAND">🛠️ ทำลายล้าง</option>
-                                    <option value="TOWN">🌾 อาหารสัตว์</option>
-                                    <option value="BARN_UPGRADE">🏠 ชุดอัพโรงนา</option>
-                                    <option value="SILO_UPGRADE">🏚️ ชุดอัพยุ้งฉาง</option>
-                                    <option value="LAND_EXPAND">🌳 ชุดขยายพื้นที่</option>
-                                    <option value="PRODUCTS">📦 สินค้าหมวดอื่น ๆ</option>
+
                                 </select>
                             </div>
                             <div class="xs:col-span-2">
@@ -771,6 +760,46 @@
                             </button>
                         </div>
                     </div>
+
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800"><i class="fa-solid fa-palette mr-1"></i> ปรับแต่งธีมเว็บไซต์ (4 สี)</h4>
+                        <p class="text-gray-500">เลือกสีหลัก สีเน้น สีพื้นหลัง และสีพื้นการ์ด/ปุ่ม ระบบจะปรับโทนสีให้ไปในทิศทางเดียวกัน</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <label class="space-y-1 block">สีหลัก <input type="color" id="theme-primary" class="w-full h-10 rounded-lg border"></label>
+                            <label class="space-y-1 block">สีเน้น <input type="color" id="theme-accent" class="w-full h-10 rounded-lg border"></label>
+                            <label class="space-y-1 block">สีพื้นหลัง <input type="color" id="theme-background" class="w-full h-10 rounded-lg border"></label>
+                            <label class="space-y-1 block">สีการ์ด/ปุ่ม <input type="color" id="theme-surface" class="w-full h-10 rounded-lg border"></label>
+                        </div>
+                        <button onclick="saveThemeSettings()" class="px-4 py-2 bg-brand-blue text-white font-bold rounded-xl">บันทึกธีม</button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800"><i class="fa-solid fa-bell mr-1"></i> เสียงแจ้งเตือนออเดอร์</h4>
+                        <label class="block text-gray-600 mb-1">เลือกเสียง (3 แบบ)</label>
+                        <select id="order-sound-select" class="w-full px-3 py-2 border rounded-xl bg-gray-50">
+                            <option value="classic">1. ระฆังใส</option><option value="chime">2. เสียงนุ่ม</option><option value="alert">3. เสียงเตือนคู่</option>
+                        </select>
+                        <div class="flex gap-2"><button onclick="previewOrderSound()" class="px-4 py-2 bg-gray-100 rounded-xl font-bold">ทดลองเสียง</button><button onclick="saveAudioSettings()" class="px-4 py-2 bg-brand-blue text-white rounded-xl font-bold">บันทึกเสียง</button></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800"><i class="fa-solid fa-music mr-1"></i> เปลี่ยนเพลงประกอบเว็บไซต์</h4>
+                        <label class="block text-gray-600 mb-1">ลิงก์ไฟล์เพลง MP3/เสียงที่เปิดผ่าน URL ได้</label>
+                        <input type="url" id="setting-music-url" placeholder="https://example.com/music.mp3" class="w-full px-3 py-2 border rounded-xl bg-gray-50">
+                        <div class="flex gap-2 flex-wrap"><button onclick="previewBackgroundMusic()" class="px-4 py-2 bg-gray-100 rounded-xl font-bold">ทดลองเพลง</button><button onclick="saveMusicSettings()" class="px-4 py-2 bg-brand-blue text-white rounded-xl font-bold">บันทึกเพลง</button></div>
+                        <p class="text-gray-400">หมายเหตุ: เบราว์เซอร์มือถืออาจต้องแตะหน้าเว็บก่อนเพลงจึงจะเล่นได้</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-4 border border-gray-200 shadow-xs space-y-3 text-xs">
+                        <h4 class="font-bold text-sm text-gray-800"><i class="fa-solid fa-tags mr-1"></i> จัดการหมวดหมู่สินค้า</h4>
+                        <form onsubmit="addCategory(event)" class="flex flex-col sm:flex-row gap-2">
+                            <input id="new-category-icon" maxlength="8" placeholder="อีโมจิ เช่น 🎁" value="📦" class="w-full sm:w-24 px-3 py-2 border rounded-xl bg-gray-50">
+                            <input id="new-category-name" required maxlength="50" placeholder="ชื่อหมวดหมู่ใหม่" class="flex-1 px-3 py-2 border rounded-xl bg-gray-50">
+                            <button class="px-4 py-2 bg-brand-blue text-white font-bold rounded-xl" type="submit">+ เพิ่มหมวดหมู่</button>
+                        </form>
+                        <div id="admin-category-list" class="space-y-2"></div>
+                        <p class="text-gray-400">การลบหมวดหมู่จะไม่ลบสินค้าเดิม แต่สินค้าที่อยู่ในหมวดนั้นอาจไม่แสดงในตัวกรองจนกว่าจะเปลี่ยนหมวดสินค้า</p>
+                    </div>
                 </div>
 
                 <!-- TAB 4: PAYMENT ACCOUNTS SETTINGS -->
@@ -867,6 +896,17 @@
         let bannerSettings = {
             imageUrl: 'https://s13.gifyu.com/images/bucSj.jpg'
         };
+        const DEFAULT_CATEGORIES = [
+            {id:'COINS',label:'🪙 รับวนเหรียญ'},{id:'DIAMONDS',label:'💎 รับเติมเพชร'},
+            {id:'BARN',label:'🍭 วัตถุดิบ ขนม แร่'},{id:'SILO',label:'🥗 ผัก ผลไม้'},
+            {id:'LAND',label:'🛠️ ทำลายล้าง'},{id:'TOWN',label:'🌾 อาหารสัตว์'},
+            {id:'BARN_UPGRADE',label:'🏠 ชุดอัพโรงนา'},{id:'SILO_UPGRADE',label:'🏚️ ชุดอัพยุ้งฉาง'},
+            {id:'LAND_EXPAND',label:'🌳 ชุดขยายพื้นที่'},{id:'PRODUCTS',label:'📦 สินค้าหมวดอื่น ๆ'}
+        ];
+        let categorySettings = DEFAULT_CATEGORIES.map(c => ({...c}));
+        let themeSettings = { primary: '#E53935', accent: '#F57C00', background: '#FFF7F0', surface: '#795548' };
+        let orderSoundSetting = 'classic';
+        let musicUrlSetting = 'https://mp3tourl.com/audio/1791980698468-b2581564-e62f-4874-a0f3-bdffec31bc49.mp3';
 
         let unsubscribeOrders = null;
         let initialOrdersLoad = true;
@@ -1007,6 +1047,116 @@
             }
         }
 
+        function renderCategoryOptions() {
+            const filter = document.getElementById('category-select');
+            const add = document.getElementById('add-prod-category');
+            const currentFilter = filter?.value || 'ALL';
+            const currentAdd = add?.value || categorySettings[0]?.id || '';
+            if (filter) filter.innerHTML = '<option value="ALL">📦 ทั้งหมดทุกหมวดหมู่</option>' +
+                categorySettings.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.label)}</option>`).join('');
+            if (add) add.innerHTML = categorySettings.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.label)}</option>`).join('');
+            if (filter && [...filter.options].some(o => o.value === currentFilter)) filter.value = currentFilter;
+            if (add && [...add.options].some(o => o.value === currentAdd)) add.value = currentAdd;
+            renderAdminCategoryList();
+        }
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function renderAdminCategoryList() {
+            const box = document.getElementById('admin-category-list');
+            if (!box) return;
+            box.innerHTML = categorySettings.map(c => `<div class="flex items-center justify-between gap-2 p-2.5 rounded-xl border bg-gray-50">
+                <span>${escapeHtml(c.label)} <small class="text-gray-400">(${escapeHtml(c.id)})</small></span>
+                <button onclick="deleteCategory('${escapeHtml(c.id)}')" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-100 font-bold">ลบ</button>
+            </div>`).join('') || '<p class="text-gray-400">ยังไม่มีหมวดหมู่</p>';
+        }
+        async function addCategory(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-category-name').value.trim();
+            const icon = document.getElementById('new-category-icon').value.trim() || '📦';
+            if (!name) return;
+            const id = 'CAT_' + Date.now().toString(36).toUpperCase();
+            categorySettings.push({id, label: `${icon} ${name}`});
+            renderCategoryOptions();
+            document.getElementById('new-category-name').value = '';
+            await saveSettingsToFirestore();
+            showToast('เพิ่มหมวดหมู่สำเร็จ', 'success');
+        }
+        async function deleteCategory(id) {
+            const used = products.some(p => p.category === id);
+            if (used) return showToast('หมวดหมู่นี้ยังมีสินค้าอยู่ กรุณาเปลี่ยนหมวดสินค้าก่อนลบ', 'error');
+            categorySettings = categorySettings.filter(c => c.id !== id);
+            renderCategoryOptions();
+            await saveSettingsToFirestore();
+            showToast('ลบหมวดหมู่แล้ว', 'success');
+        }
+        function applyThemeSettingsUI() {
+            const t = themeSettings || {};
+            document.documentElement.style.setProperty('--theme-primary', t.primary || '#E53935');
+            document.documentElement.style.setProperty('--theme-accent', t.accent || '#F57C00');
+            document.documentElement.style.setProperty('--theme-background', t.background || '#FFF7F0');
+            document.documentElement.style.setProperty('--theme-surface', t.surface || '#795548');
+            [['theme-primary','primary'],['theme-accent','accent'],['theme-background','background'],['theme-surface','surface']].forEach(([id,key])=>{
+                const el=document.getElementById(id); if(el) el.value=t[key] || ({primary:'#E53935',accent:'#F57C00',background:'#FFF7F0',surface:'#795548'}[key]);
+            });
+        }
+        async function saveThemeSettings() {
+            themeSettings = {
+                primary: document.getElementById('theme-primary').value,
+                accent: document.getElementById('theme-accent').value,
+                background: document.getElementById('theme-background').value,
+                surface: document.getElementById('theme-surface').value
+            };
+            applyThemeSettingsUI();
+            await saveSettingsToFirestore();
+            showToast('บันทึกธีมสีสำเร็จ', 'success');
+        }
+        function playChosenOrderSound() {
+            if (typeof Tone === 'undefined') return;
+            Tone.start();
+            const synth = new Tone.Synth().toDestination();
+            const now = Tone.now();
+            if (orderSoundSetting === 'chime') {
+                synth.triggerAttackRelease('E5','8n',now);
+                synth.triggerAttackRelease('A5','8n',now+0.16);
+                synth.triggerAttackRelease('C6','4n',now+0.32);
+            } else if (orderSoundSetting === 'alert') {
+                synth.triggerAttackRelease('C6','16n',now);
+                synth.triggerAttackRelease('C6','16n',now+0.18);
+                synth.triggerAttackRelease('G5','8n',now+0.36);
+            } else {
+                synth.triggerAttackRelease('C5','8n',now);
+                synth.triggerAttackRelease('E5','8n',now+0.12);
+                synth.triggerAttackRelease('G5','4n',now+0.24);
+            }
+            setTimeout(()=>synth.dispose(),1500);
+        }
+        function previewOrderSound() {
+            const select = document.getElementById('order-sound-select');
+            const old = orderSoundSetting; orderSoundSetting = select.value;
+            playChosenOrderSound(); orderSoundSetting = old;
+        }
+        async function saveAudioSettings() {
+            orderSoundSetting = document.getElementById('order-sound-select').value;
+            await saveSettingsToFirestore();
+            showToast('บันทึกเสียงแจ้งเตือนออเดอร์แล้ว', 'success');
+        }
+        function previewBackgroundMusic() {
+            const url = document.getElementById('setting-music-url').value.trim();
+            if (!url) return showToast('กรุณาใส่ลิงก์เพลง', 'error');
+            const audio = document.getElementById('bg-music');
+            audio.src = url; audio.load(); audio.play().catch(()=>showToast('กรุณาแตะปุ่มเล่นเพลงอีกครั้ง หรือเช็กลิงก์ไฟล์เพลง', 'error'));
+        }
+        async function saveMusicSettings() {
+            const url = document.getElementById('setting-music-url').value.trim();
+            if (!url) return showToast('กรุณาใส่ลิงก์เพลง', 'error');
+            musicUrlSetting = url;
+            const audio = document.getElementById('bg-music');
+            audio.src = url; audio.load();
+            await saveSettingsToFirestore();
+            showToast('บันทึกลิงก์เพลงสำเร็จ', 'success');
+        }
+
         async function saveBannerSettings() {
             const imageUrl = document.getElementById('setting-hero-image').value.trim();
             if(!imageUrl) return showToast('กรุณากรอก URL รูปภาพ Banner', 'error');
@@ -1056,6 +1206,8 @@
         // ==========================================
 
         window.addEventListener('DOMContentLoaded', async () => {
+            applyThemeSettingsUI();
+            renderCategoryOptions();
             initBackgroundMusicListener();
 
             auth.onAuthStateChanged((user) => {
@@ -1082,15 +1234,28 @@
                     const data = doc.data();
                     if (data.payment) paymentSettings = data.payment;
                     if (data.banner) bannerSettings = data.banner;
+                    if (Array.isArray(data.categories)) categorySettings = data.categories;
+                    if (data.theme) themeSettings = data.theme;
+                    if (data.orderSound) orderSoundSetting = data.orderSound;
+                    if (data.musicUrl) musicUrlSetting = data.musicUrl;
                 } else {
                     await saveSettingsToFirestore();
                 }
                 applyBannerSettingsUI();
                 applyPaymentSettingsUI();
+                renderCategoryOptions();
+                applyThemeSettingsUI();
+                document.getElementById('order-sound-select').value = orderSoundSetting;
+                document.getElementById('setting-music-url').value = musicUrlSetting;
+                document.getElementById('bg-music').src = musicUrlSetting;
             } catch (error) {
                 console.error("Error loading settings:", error);
                 paymentSettings = JSON.parse(localStorage.getItem('hayday_payment_config')) || paymentSettings;
                 bannerSettings = JSON.parse(localStorage.getItem('hayday_banner_config')) || bannerSettings;
+                renderCategoryOptions();
+                applyThemeSettingsUI();
+                document.getElementById('order-sound-select').value = orderSoundSetting;
+                document.getElementById('setting-music-url').value = musicUrlSetting;
                 applyBannerSettingsUI();
                 applyPaymentSettingsUI();
             }
@@ -1100,8 +1265,12 @@
              try {
                 await db.collection('settings').doc('master').set({
                     payment: paymentSettings,
-                    banner: bannerSettings
-                });
+                    banner: bannerSettings,
+                    categories: categorySettings,
+                    theme: themeSettings,
+                    orderSound: orderSoundSetting,
+                    musicUrl: musicUrlSetting
+                }, { merge: true });
             } catch (error) {
                 console.error("Error saving settings:", error);
             }
@@ -1262,19 +1431,8 @@
         }
 
         function getCategoryLabel(cat) {
-            switch(cat) {
-                case 'PRODUCTS': return 'สินค้าหมวดอื่น ๆ';
-                case 'BARN': return 'วัตถุดิบ ขนม แร่';
-                case 'SILO': return 'ผัก ผลไม้';
-                case 'LAND': return 'ทำลายล้าง';
-                case 'TOWN': return 'อาหารสัตว์';
-                case 'COINS': return 'รับวนเหรียญ';
-                case 'DIAMONDS': return 'รับเติมเพชร';
-                case 'BARN_UPGRADE': return 'ชุดอัพโรงนา';
-                case 'SILO_UPGRADE': return 'ชุดอัพยุ้งฉาง';
-                case 'LAND_EXPAND': return 'ชุดขยายพื้นที่';
-                default: return 'วัตถุดิบ ขนม แร่';
-            }
+            const found = categorySettings.find(c => c.id === cat);
+            return found ? found.label : '📦 หมวดหมู่ที่ไม่มีแล้ว';
         }
 
         function getCategoryBadgeColor(cat) {
@@ -1696,10 +1854,7 @@
             try {
                 if (typeof Tone !== 'undefined') {
                     Tone.start();
-                    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
-                    const now = Tone.now();
-                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "8n", now);
-                    synth.triggerAttackRelease(["G5", "C6"], "4n", now + 0.18);
+                    playChosenOrderSound();
                 }
             } catch (err) {
                 console.log('Audio alert error:', err);
@@ -2235,16 +2390,7 @@ ${itemsText}------------------------
                     </td>
                     <td class="p-3">
                         <select id="admin-category-${p.id}" class="px-2 py-1 border rounded-lg text-xs bg-gray-50">
-                            <option value="COINS" ${p.category === 'COINS' ? 'selected' : ''}>🪙 รับวนเหรียญ</option>
-                            <option value="DIAMONDS" ${p.category === 'DIAMONDS' ? 'selected' : ''}>💎 รับเติมเพชร</option>
-                            <option value="BARN" ${p.category === 'BARN' ? 'selected' : ''}>🍭 วัตถุดิบ ขนม แร่</option>
-                            <option value="SILO" ${p.category === 'SILO' ? 'selected' : ''}>🥗 ผัก ผลไม้</option>
-                            <option value="LAND" ${p.category === 'LAND' ? 'selected' : ''}>🛠️ ทำลายล้าง</option>
-                            <option value="TOWN" ${p.category === 'TOWN' ? 'selected' : ''}>🌾 อาหารสัตว์</option>
-                            <option value="BARN_UPGRADE" ${p.category === 'BARN_UPGRADE' ? 'selected' : ''}>🏠 ชุดอัพโรงนา</option>
-                            <option value="SILO_UPGRADE" ${p.category === 'SILO_UPGRADE' ? 'selected' : ''}>🏚️ ชุดอัพยุ้งฉาง</option>
-                            <option value="LAND_EXPAND" ${p.category === 'LAND_EXPAND' ? 'selected' : ''}>🌳 ชุดขยายพื้นที่</option>
-                            <option value="PRODUCTS" ${p.category === 'PRODUCTS' ? 'selected' : ''}>📦 สินค้าหมวดอื่น ๆ</option>
+                            ${categorySettings.map(c => `<option value="${escapeHtml(c.id)}" ${p.category === c.id ? 'selected' : ''}>${escapeHtml(c.label)}</option>`).join('')}
                         </select>
                         <button onclick="updateProductCategory('${p.id}')" class="mt-1 px-2 py-1 bg-brand-blue text-white rounded-lg hover:bg-brand-blueDark transition font-semibold text-[10px]">บันทึกหมวด</button>
                     </td>
